@@ -26,7 +26,7 @@ namespace BeacomStair
         public const string StringerProfile = "PFC-150*75*18";
         public const string TreadProfile = "PL10";
         public const string RiserProfile = "PL6";
-        public const string TreadBracketProfile = "PL8";
+        public const string TreadSidePlateProfile = "PL8";
         public const string EndPlateProfile = "PL10";
         public const string Material = "S355JR";
 
@@ -312,7 +312,7 @@ namespace BeacomStair
 
             ContourPlate sidePlate = CreatePlate(
                 "BEACOM TREAD SIDE PLATE " + treadNumber + (leftSide ? " L" : " R"),
-                StairSettings.TreadBracketProfile,
+                StairSettings.TreadSidePlateProfile,
                 LocalPoint(sidePlateX1, sidePlateY, sidePlateTopZ),
                 LocalPoint(sidePlateX2, sidePlateY, sidePlateTopZ),
                 LocalPoint(sidePlateX2, sidePlateY, sidePlateBottomZ),
