@@ -26,7 +26,7 @@ namespace BeacomStair
         public const double MidRailHeight = 550.0;
         public const double PlatformBeamReferenceDrop = 100.0;
 
-        public const string StringerProfile = "PFC200X75X23";
+        public const string StringerProfile = "PFC-150*75*18";
         public const string TreadProfile = "PL8";
         public const string RiserProfile = "PL6";
         public const string RailProfile = "CHS42.4*3.2";
