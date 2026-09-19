@@ -902,13 +902,16 @@ namespace BeacomStair
                 trimmedStart,
                 trimmedEnd);
 
-            // Do not move the stringer node. Fit the physical end of the PFC
-            // directly to the end face of the two-point joining plate.
-            CreateFittingAtPlateEnd(
+            // Leave both member nodes untouched. Create two fitting planes
+            // parallel to the joining plate centreline, offset 5 mm either side
+            // perpendicular to the plate. This creates a 10 mm clear slot for
+            // the PL10 joining plate.
+            CreateJoiningPlateClearanceCuts(
                 flightStringer,
+                verticalPfc,
                 trimmedStart,
                 trimmedEnd,
-                "BOTTOM FLIGHT PFC " + side + " TO JOINING PLATE FACE");
+                "BOTTOM PFC CLEARANCE " + side);
 
             CreateFilletWeld(
                 flightStringer,
@@ -921,19 +924,17 @@ namespace BeacomStair
                 "BOTTOM TWO-POINT JOINING PLATE " + side + " TO VERTICAL PFC");
         }
 
-        private void CreateFittingAtPlateEnd(
-            Beam beam,
+        private void CreateJoiningPlateClearanceCuts(
+            Beam flightStringer,
+            Beam verticalPfc,
+            Point plateStart,
             Point plateEnd,
-            Point otherPlateEnd,
             string description)
         {
-            // The fitting plane is the actual end face of the two-point plate:
-            // its normal follows the plate centreline, while the plane itself
-            // spans across the stair and perpendicular to that centreline.
             Vector plateDirection = new Vector(
-                otherPlateEnd.X - plateEnd.X,
-                otherPlateEnd.Y - plateEnd.Y,
-                otherPlateEnd.Z - plateEnd.Z);
+                plateEnd.X - plateStart.X,
+                plateEnd.Y - plateStart.Y,
+                plateEnd.Z - plateStart.Z);
 
             plateDirection.Normalize();
 
@@ -944,22 +945,83 @@ namespace BeacomStair
 
             acrossStair.Normalize();
 
-            Vector inPlane = plateDirection.Cross(acrossStair);
-            inPlane.Normalize();
+            // acrossStair x plateDirection gives a vector in the stair side plane
+            // perpendicular to the joining plate centreline.
+            Vector perpendicular =
+                acrossStair.Cross(plateDirection);
 
+            perpendicular.Normalize();
+
+            // Make "positive" perpendicular consistently mean upward in Z.
+            if (perpendicular.Z < 0.0)
+            {
+                perpendicular = new Vector(
+                    -perpendicular.X,
+                    -perpendicular.Y,
+                    -perpendicular.Z);
+            }
+
+            Point midPoint = new Point(
+                (plateStart.X + plateEnd.X) / 2.0,
+                (plateStart.Y + plateEnd.Y) / 2.0,
+                (plateStart.Z + plateEnd.Z) / 2.0);
+
+            Point upperCutOrigin = new Point(
+                midPoint.X + (perpendicular.X * 5.0),
+                midPoint.Y + (perpendicular.Y * 5.0),
+                midPoint.Z + (perpendicular.Z * 5.0));
+
+            Point lowerCutOrigin = new Point(
+                midPoint.X - (perpendicular.X * 5.0),
+                midPoint.Y - (perpendicular.Y * 5.0),
+                midPoint.Z - (perpendicular.Z * 5.0));
+
+            // Sloping PFC: cut on the upper side of the PL10 plate.
+            CreateParallelFitting(
+                flightStringer,
+                upperCutOrigin,
+                acrossStair,
+                plateDirection,
+                description + " - FLIGHT +5MM");
+
+            // Vertical PFC: cut on the lower side of the PL10 plate.
+            CreateParallelFitting(
+                verticalPfc,
+                lowerCutOrigin,
+                acrossStair,
+                plateDirection,
+                description + " - VERTICAL -5MM");
+        }
+
+        private void CreateParallelFitting(
+            Beam beam,
+            Point origin,
+            Vector acrossStair,
+            Vector plateDirection,
+            string description)
+        {
             Fitting fitting = new Fitting
             {
                 Father = beam,
                 Plane = new Tekla.Structures.Model.Plane()
             };
 
-            fitting.Plane.Origin = plateEnd;
-            fitting.Plane.AxisX = acrossStair;
-            fitting.Plane.AxisY = inPlane;
+            // These two axes define a plane whose side-elevation trace is exactly
+            // parallel to the diagonal joining plate.
+            fitting.Plane.Origin = origin;
+            fitting.Plane.AxisX = new Vector(
+                acrossStair.X,
+                acrossStair.Y,
+                acrossStair.Z);
+
+            fitting.Plane.AxisY = new Vector(
+                plateDirection.X,
+                plateDirection.Y,
+                plateDirection.Z);
 
             InsertOrThrow(
                 fitting,
-                description + " [fit at two-point plate end face]");
+                description + " [parallel to joining plate]");
         }
 
         private Beam CreateTwoPointWebPlate(
