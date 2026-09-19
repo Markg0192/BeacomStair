@@ -41,7 +41,7 @@ If your Tekla installation is somewhere else, change `TeklaInstallDir` in `Beaco
 
 The stair geometry above is fixed. The section/plate defaults below are deliberately kept in one settings class so they are easy to change after the first live model test:
 
-- Stringers/platform side beams: `PFC200*75*23`
+- Stringers/platform side beams: `PFC-150*75*18`
 - Treads/platform deck: `PL8`
 - Risers: `PL6`
 - Handrail/guard: `CHS42.4*3.2`
