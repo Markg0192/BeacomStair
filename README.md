@@ -43,14 +43,14 @@ The stair geometry above is fixed. The section/plate defaults below are delibera
 
 - Stringers/platform side beams: `PFC-150*75*18`
 - Treads/platform deck: `PL10`
-- Tread brackets: `PL8`, one below each side of every tread
-- Tread fixing: 2 × M12 bolts per side
+- Tread side plates: `PL8`, vertical at each side of every tread
+- Tread fixing: 2 × M12 bolts through each side plate into the PFC web
 - Risers: `PL6`
 - Top wall connection: 10 mm plate with 2 × M16 site anchors per stringer
 - Bottom floor connection: 10 mm base plate with 2 × M16 site anchors per stringer
 - Welded joints: 6 mm fillet welds
 - Handrail/guard: `CHS42.4*3.2` (42.4 mm OD CHS tube)
-- Tread/platform plate width: 1050 mm
+- Clear tread/platform width between PFC web faces: 900 mm
 - Stringer centres: 900 mm
 - Stair handrail height: 900 mm above the pitch line
 - Platform guard height: 1100 mm
@@ -64,8 +64,8 @@ This has been set up specifically for Tekla Structures 2023. The next useful ste
 
 ## Detailing approach
 
-The PFC stringers are modelled with Tekla rotation set to TOP. The left and right PFCs use opposite modelling directions so the channel toes face inward on both sides.
+The PFC stringers are modelled with Tekla rotation set to TOP and On plane set to RIGHT. The left and right PFCs use opposite modelling directions so the flat web faces are inward and the open channel/toes face outward. The PFC reference lines are the two inward web-face datums, 900 mm apart.
 
-The tread arrangement is a simple plate-tread detail: a 10 mm tread plate sits over two small plate brackets, one at each stringer, and is fixed with two bolts per side. The brackets are welded to the PFC stringers.
+The tread arrangement is a simple fabricated plate tread: a 10 mm horizontal tread spans between the PFC web-face datums. A vertical PL8 side plate is welded beneath each tread edge and each side plate is fixed to the adjacent PFC web with two M12 bolts.
 
 The wall and floor anchor bolts are represented as Tekla bolt groups through the connection plates. Because the tool does not ask you to select a concrete wall or slab object, the anchor bolt group is attached to the plate itself as a modelling representation of the site anchors.
