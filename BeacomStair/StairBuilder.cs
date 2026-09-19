@@ -54,7 +54,7 @@ namespace BeacomStair
         public const double TopJointPlateLength = 180.0;
         public const double TopJointPlateDepth = 160.0;
         public const string BottomJoiningPlateProfile = "PL10*50";
-        public const double BottomJoiningPlateLowerHeight = 100.0;
+        public const double BottomJoiningPlateLowerHeight = 125.0;
         public static double BottomStringerJointHeight
         {
             get
@@ -786,9 +786,13 @@ namespace BeacomStair
             bool leftSide,
             string side)
         {
+            // The two-point plate is rotated 90 degrees so its 50 mm
+            // width runs across the PFC footprint. Put its centreline 25 mm
+            // outward from the inward web datum so the whole PL10*50 sits
+            // inside the 75 mm channel footprint.
             double plateY = leftSide
-                ? stringerY + (StairSettings.StringerJointPlateThickness / 2.0)
-                : stringerY - (StairSettings.StringerJointPlateThickness / 2.0);
+                ? stringerY - 25.0
+                : stringerY + 25.0;
 
             double x1 =
                 StairSettings.PlatformLength -
@@ -923,13 +927,13 @@ namespace BeacomStair
 
                 plate.Position.Plane = Position.PlaneEnum.MIDDLE;
                 plate.Position.Depth = Position.DepthEnum.MIDDLE;
-                plate.Position.Rotation = Position.RotationEnum.FRONT;
+                plate.Position.Rotation = Position.RotationEnum.TOP;
 
                 InsertOrThrow(
                     plate,
                     name + " [" +
                     StairSettings.BottomJoiningPlateProfile +
-                    ", two-point plate, Rotation FRONT]");
+                    ", two-point plate, Rotation TOP, centred inside PFC footprint]");
 
                 return plate;
             }
