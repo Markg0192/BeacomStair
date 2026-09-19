@@ -22,8 +22,8 @@ namespace BeacomStair
         // This gives a genuine 900 mm clear tread width between stringers.
         public const double TreadWidth = 900.0;
         public const double StringerSpacing = 900.0;
-        public const double StringerDepth = 150.0;
-        public const string StringerProfile = "PFC-150*75*18";
+        public const double StringerDepth = 180.0;
+        public const string StringerProfile = "PFC-180*75*20";
         public const string TreadProfile = "PL10";
         public const string RiserProfile = "PL6";
         public const string TreadSidePlateProfile = "PL8";
@@ -31,12 +31,14 @@ namespace BeacomStair
         public const string Material = "S355JR";
 
         // Tread detail: horizontal PL10 tread with a vertical plate at each side.
-        public const double TreadSidePlateLength = 150.0;
-        public const double TreadSidePlateHeight = 80.0;
+        public const double TreadSidePlateLength = 250.0;
+        public const double TreadSidePlateHeight = 70.0;
         public const double TreadSidePlateThickness = 8.0;
         public const double TreadPlateThickness = 10.0;
         public const double TreadBoltSize = 12.0;
-        public const double TreadBoltSpacing = 75.0;
+        public const double TreadBoltSpacing = 125.0;
+        public const double TreadFirstBoltFromLeadingEdge = 30.0;
+        public const double TreadBoltDownFromTop = 58.0;
 
         // Top and bottom connections.
         public const double WallPlateWidth = 180.0;
@@ -355,34 +357,29 @@ namespace BeacomStair
             ContourPlate tread,
             Beam stringer,
             double treadStartX,
-            double treadZ,
+            double treadTopZ,
             double stringerY,
             bool leftSide,
             int treadNumber)
         {
-            // A conventional tread end plate: vertical plate below the tread edge,
-            // welded to the PL10 tread and bolted through the PFC web.
-            double sidePlateX1 =
-                treadStartX +
-                ((StairSettings.Going - StairSettings.TreadSidePlateLength) / 2.0);
-
-            double sidePlateX2 =
-                sidePlateX1 + StairSettings.TreadSidePlateLength;
+            // Full-depth tread end plate:
+            // PL10 horizontal tread above a shallow PL8 vertical end plate.
+            // The end plate follows the full 250 mm going and bolts to the PFC web.
+            double sidePlateX1 = treadStartX;
+            double sidePlateX2 = treadStartX + StairSettings.Going;
 
             double sidePlateTopZ =
-                treadZ - StairSettings.TreadPlateThickness;
+                treadTopZ - StairSettings.TreadPlateThickness;
 
             double sidePlateBottomZ =
                 sidePlateTopZ - StairSettings.TreadSidePlateHeight;
 
-            // Centre the PL8 plate just inside the stringer reference plane so its
-            // outer face sits on the PFC web plane.
             double sidePlateY = leftSide
                 ? stringerY + (StairSettings.TreadSidePlateThickness / 2.0)
                 : stringerY - (StairSettings.TreadSidePlateThickness / 2.0);
 
             ContourPlate sidePlate = CreatePlate(
-                "BEACOM TREAD SIDE PLATE " + treadNumber + (leftSide ? " L" : " R"),
+                "BEACOM TREAD END PLATE " + treadNumber + (leftSide ? " L" : " R"),
                 StairSettings.TreadSidePlateProfile,
                 LocalPoint(sidePlateX1, sidePlateY, sidePlateTopZ),
                 LocalPoint(sidePlateX2, sidePlateY, sidePlateTopZ),
@@ -395,14 +392,19 @@ namespace BeacomStair
                 sidePlate,
                 "TREAD " + treadNumber +
                 (leftSide ? " LEFT" : " RIGHT") +
-                " SIDE PLATE TO TREAD");
+                " END PLATE TO TREAD");
 
-            double boltZ = sidePlateTopZ - (StairSettings.TreadSidePlateHeight / 2.0);
+            // Leading edge is the downhill/front edge of the tread (x2).
+            // Keep the familiar plate-tread arrangement:
+            // first bolt 30 mm back from the leading edge, second 125 mm behind it.
             double firstBoltX =
-                treadStartX +
-                ((StairSettings.Going - StairSettings.TreadBoltSpacing) / 2.0);
+                sidePlateX2 - StairSettings.TreadFirstBoltFromLeadingEdge;
 
-            double secondBoltX = firstBoltX + StairSettings.TreadBoltSpacing;
+            double secondBoltX =
+                firstBoltX - StairSettings.TreadBoltSpacing;
+
+            double boltZ =
+                treadTopZ - StairSettings.TreadBoltDownFromTop;
 
             CreateTwoBoltArray(
                 sidePlate,
@@ -414,7 +416,7 @@ namespace BeacomStair
                 BoltPlaneKind.StairSide,
                 "TREAD " + treadNumber +
                 (leftSide ? " LEFT" : " RIGHT") +
-                " SIDE PLATE - 2 M12 BOLTS TO PFC");
+                " END PLATE - 2 M12 BOLTS TO PFC");
         }
 
         private void CreateRisers(PlatformParts platform, FlightParts flight)
