@@ -46,14 +46,14 @@ namespace BeacomStair
         // Top and bottom connections.
         public const double WallPlateWidth = 180.0;
         public const double WallPlateHeight = 220.0;
-        public const double BasePlateLength = 220.0;
+        public const double BasePlateLength = 300.0;
         public const double BasePlateWidth = 180.0;
         public const double BasePlateThickness = 10.0;
         public const double StringerJointPlateThickness = 10.0;
         public const double TopJointPlateLength = 180.0;
         public const double TopJointPlateDepth = 160.0;
-        public const double BottomJointPlateLength = 160.0;
-        public const double BottomJointPlateDepth = 180.0;
+        public const double BottomJointPlateLength = 120.0;
+        public const double BottomJointPlateDepth = 120.0;
         public static double BottomStringerJointHeight
         {
             get
@@ -65,7 +65,8 @@ namespace BeacomStair
             }
         }
         public const double AnchorBoltSize = 16.0;
-        public const double AnchorBoltSpacing = 100.0;
+        public const double WallAnchorBoltSpacing = 100.0;
+        public const double BaseAnchorBoltSpacing = 220.0;
         public const string BoltStandard = "8.8XOX";
 
         // Welds.
@@ -274,7 +275,7 @@ namespace BeacomStair
                 -halfStringerSpacing,
                 basePlateTopZ,
                 StairSettings.BottomStringerJointHeight,
-                false);
+                true);
 
             Beam rightBottomPost = CreateVerticalPfcBeam(
                 "BEACOM BOTTOM VERTICAL PFC R",
@@ -282,7 +283,7 @@ namespace BeacomStair
                 halfStringerSpacing,
                 basePlateTopZ,
                 StairSettings.BottomStringerJointHeight,
-                true);
+                false);
 
             CreateTopStringerJointPlate(
                 platform.LeftStringer,
@@ -502,8 +503,8 @@ namespace BeacomStair
 
             CreateFilletWeld(stringer, wallPlate, "WALL END PLATE " + side + " TO PFC");
 
-            Point lowerBolt = LocalPoint(5.0, y, centreZ - (StairSettings.AnchorBoltSpacing / 2.0));
-            Point upperBolt = LocalPoint(5.0, y, centreZ + (StairSettings.AnchorBoltSpacing / 2.0));
+            Point lowerBolt = LocalPoint(5.0, y, centreZ - (StairSettings.WallAnchorBoltSpacing / 2.0));
+            Point upperBolt = LocalPoint(5.0, y, centreZ + (StairSettings.WallAnchorBoltSpacing / 2.0));
 
             // There is no concrete wall object selected by this tool. Self-referencing
             // the plate lets Tekla create the two site bolt objects as the anchor
@@ -538,12 +539,12 @@ namespace BeacomStair
             CreateFilletWeld(stringer, basePlate, "BASE PLATE " + side + " TO PFC");
 
             Point firstBolt = LocalPoint(
-                x - (StairSettings.AnchorBoltSpacing / 2.0),
+                x - (StairSettings.BaseAnchorBoltSpacing / 2.0),
                 y,
                 basePlateZ);
 
             Point secondBolt = LocalPoint(
-                x + (StairSettings.AnchorBoltSpacing / 2.0),
+                x + (StairSettings.BaseAnchorBoltSpacing / 2.0),
                 y,
                 basePlateZ);
 
@@ -774,31 +775,35 @@ namespace BeacomStair
             bool leftSide,
             string side)
         {
+            // Small PL10 plate on the inside web face only. It bridges the last
+            // piece of the sloping PFC to the short vertical PFC without covering
+            // most of the bottom connection.
             double plateY = leftSide
                 ? stringerY + (StairSettings.StringerJointPlateThickness / 2.0)
                 : stringerY - (StairSettings.StringerJointPlateThickness / 2.0);
 
-            double x1 =
-                StairSettings.OverallLength -
-                StairSettings.BottomJointPlateLength;
+            double jointX = StairSettings.OverallLength;
+            double jointZ = StairSettings.BottomStringerJointHeight;
 
-            double x2 = StairSettings.OverallLength;
+            double xLeft =
+                jointX - StairSettings.BottomJointPlateLength;
+
+            double xLowerLeft =
+                jointX - (StairSettings.BottomJointPlateLength * 0.40);
 
             double topZ =
-                StairSettings.BottomStringerJointHeight +
-                (StairSettings.BottomJointPlateDepth / 2.0);
+                jointZ + (StairSettings.BottomJointPlateDepth * 0.35);
 
             double bottomZ =
-                StairSettings.BottomStringerJointHeight -
-                (StairSettings.BottomJointPlateDepth / 2.0);
+                jointZ - (StairSettings.BottomJointPlateDepth * 0.65);
 
             ContourPlate plate = CreatePlate(
                 "BEACOM BOTTOM STRINGER JOINT PLATE " + side,
                 StairSettings.EndPlateProfile,
-                LocalPoint(x1, plateY, topZ),
-                LocalPoint(x2, plateY, topZ),
-                LocalPoint(x2, plateY, bottomZ),
-                LocalPoint(x1, plateY, bottomZ),
+                LocalPoint(xLeft, plateY, topZ),
+                LocalPoint(jointX, plateY, topZ),
+                LocalPoint(jointX, plateY, bottomZ),
+                LocalPoint(xLowerLeft, plateY, bottomZ),
                 "8");
 
             CreateFilletWeld(
@@ -818,15 +823,14 @@ namespace BeacomStair
             double y,
             double bottomZ,
             double topZ,
-            bool reverseDirection)
+            bool leftSide)
         {
-            Point nominalStart = LocalPoint(x, y, bottomZ);
-            Point nominalEnd = LocalPoint(x, y, topZ);
-
-            Point start = reverseDirection ? nominalEnd : nominalStart;
-            Point end = reverseDirection ? nominalStart : nominalEnd;
-
-            Beam beam = new Beam(start, end)
+            // Model vertical members bottom-to-top. Tekla's vertical-member
+            // orientation is much more predictable this way than reversing the
+            // start/end points.
+            Beam beam = new Beam(
+                LocalPoint(x, y, bottomZ),
+                LocalPoint(x, y, topZ))
             {
                 Name = name,
                 Class = "2"
@@ -835,17 +839,20 @@ namespace BeacomStair
             beam.Profile.ProfileString = StairSettings.StringerProfile;
             beam.Material.MaterialString = StairSettings.Material;
 
-            // Keep the same left/right handedness philosophy as the sloping PFCs.
-            // The short vertical piece is centred on the foot datum and ends directly
-            // on top of the base plate.
+            // FRONT/BACK mirrors the two channels while keeping the flat web faces
+            // toward the stair and the open channel/toes outward. TOP is correct
+            // for the sloping beams but rolls a vertical PFC around its axis.
             beam.Position.Plane = Position.PlaneEnum.RIGHT;
             beam.Position.Depth = Position.DepthEnum.MIDDLE;
-            beam.Position.Rotation = Position.RotationEnum.TOP;
+            beam.Position.Rotation = leftSide
+                ? Position.RotationEnum.FRONT
+                : Position.RotationEnum.BACK;
 
             InsertOrThrow(
                 beam,
                 name + " [vertical " + StairSettings.StringerProfile +
-                ", plane: RIGHT, rotation: TOP]");
+                ", plane: RIGHT, rotation: " +
+                (leftSide ? "FRONT" : "BACK") + "]");
 
             return beam;
         }
