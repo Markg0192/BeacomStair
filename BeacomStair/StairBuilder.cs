@@ -39,7 +39,8 @@ namespace BeacomStair
         public const double TreadBoltSpacing = 125.0;
         public const double TreadFirstBoltFromLeadingEdge = 30.0;
         public const double TreadBoltDownFromTop = 58.0;
-        public const double KickerDepth = 50.0;
+        public const double KickerUpstand = 50.0;
+        public const double KickerDownstand = 10.0;
 
         // Top and bottom connections.
         public const double WallPlateWidth = 180.0;
@@ -441,10 +442,10 @@ namespace BeacomStair
                     StairSettings.TotalRise - ((i + 1) * StairSettings.Rise);
 
                 double kickerTopZ =
-                    treadTopZ - StairSettings.TreadPlateThickness;
+                    treadTopZ + StairSettings.KickerUpstand;
 
                 double kickerBottomZ =
-                    kickerTopZ - StairSettings.KickerDepth;
+                    treadTopZ - StairSettings.KickerDownstand;
 
                 ContourPlate kicker = CreatePlate(
                     "BEACOM TREAD KICKER " + (i + 1),
@@ -458,7 +459,7 @@ namespace BeacomStair
                 CreateFilletWeld(
                     flight.Treads[i],
                     kicker,
-                    "TREAD " + (i + 1) + " TO 50MM KICKER");
+                    "TREAD " + (i + 1) + " TO 50MM UPSTAND KICKER");
             }
         }
 
@@ -1007,7 +1008,7 @@ namespace BeacomStair
                     BoltType = BoltGroup.BoltTypeEnum.BOLT_TYPE_SITE,
                     CutLength = 200.0,
                     ExtraLength = 0.0,
-                    ThreadInMaterial = BoltGroup.BoltThreadInMaterialEnum.THREAD_IN_MATERIAL_NO,
+                    ThreadInMaterial = BoltGroup.BoltThreadInMaterialEnum.THREAD_IN_MATERIAL_YES,
                     Bolt = true,
 
                     // Bolt head side: bolt only.
