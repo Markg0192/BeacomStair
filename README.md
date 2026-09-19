@@ -45,7 +45,7 @@ The stair geometry above is fixed. The section/plate defaults below are delibera
 - Treads/platform deck: `PL10`
 - Tread end plates: `PL8`, full 250 mm tread depth × 70 mm deep
 - Tread fixing: 2 × M12 bolts per end plate; first bolt 30 mm from leading edge, 125 mm centres
-- Risers: `PL6`
+- Tread kickers: `PL6`, 50 mm downstand at the back edge of each tread
 - Platform/flight joint: 10 mm web plate at each PFC, 6 mm fillet welded to both members
 - Top wall connection: 10 mm plate with 2 × M16 site anchors per stringer
 - Bottom stringer detail: sloping PFC ends about 250 mm above floor, connects through a 10 mm web plate to a short vertical PFC
@@ -76,3 +76,8 @@ The wall and floor anchor bolts are represented as Tekla bolt groups through the
 ## Level convention
 
 The quoted stair levels are finished walking-surface levels. The top face of the PL10 landing is at exactly 3170 mm above the picked wall/floor datum. Horizontal PL10 tread plates are similarly offset by half their thickness so their top faces, rather than their centre planes, land on the calculated tread levels.
+
+
+## Bolt assembly convention
+
+All generated bolts are SITE bolts. Bolt cut length is 200 mm and extra length is 0 mm. The assembly is bolt head only on the head side, with one washer and one nut on the nut side.
