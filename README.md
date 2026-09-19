@@ -24,10 +24,10 @@ Open a Tekla Structures 2023 model, build **BeacomStair.sln**, then run the `Bea
 
 The tool connects to the currently open Tekla model and asks for only two points:
 
-1. **Start point** - pick the centre of the top platform back edge at upper-floor level.
-2. **Direction point** - pick anywhere in the direction the stair should run toward the foot.
+1. **Start point** - pick the centreline of the stair foot at ground level.
+2. **End / direction point** - pick toward the top end of the stair.
 
-The distance to the second point does not matter; it is used only to establish direction. The tool already knows the stair width, rise, going, platform length and overall run, so it derives the cross-stair direction automatically at 90 degrees to the picked run.
+The first point is the actual ground-level anchor. The distance and height of the second point do not matter; it establishes the horizontal direction only. The tool then creates the fixed 3500 mm flight rising 3170 mm, followed by the 1000 mm top platform, for 4500 mm overall horizontal length.
 
 ## Tekla references
 
@@ -44,7 +44,7 @@ The stair geometry above is fixed. The section/plate defaults below are delibera
 - Stringers/platform side beams: `PFC-150*75*18`
 - Treads/platform deck: `PL8`
 - Risers: `PL6`
-- Handrail/guard: `CHS42.4*3.2`
+- Handrail/guard: `CHS42.4*3.2` (42.4 mm OD CHS tube)
 - Tread/platform plate width: 1050 mm
 - Stringer centres: 900 mm
 - Stair handrail height: 900 mm above the pitch line
