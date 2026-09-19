@@ -890,18 +890,22 @@ namespace BeacomStair
                 // Vertical   -> Depth (Behind = Down, Front = Up)
                 if (leftSide)
                 {
-                    // This is the physical left-hand upright in the current stair
-                    // orientation. Tekla was showing Horizontal = Left, so use
-                    // Plane LEFT here to make the property pane resolve to Right.
-                    // Keep Down / Top unchanged.
-                    column.Position.Plane = Position.PlaneEnum.LEFT;
-                    column.Position.Depth = Position.DepthEnum.BEHIND;
+                    // Physical left-hand upright:
+                    // Vertical = Down  -> Plane RIGHT
+                    // Rotation = Top   -> Rotation TOP
+                    // Horizontal = Right -> Depth FRONT
+                    //
+                    // For COLUMN-type members Tekla maps the column Vertical
+                    // control through Position.Plane and the Horizontal control
+                    // through Position.Depth.
+                    column.Position.Plane = Position.PlaneEnum.RIGHT;
+                    column.Position.Depth = Position.DepthEnum.FRONT;
                     column.Position.Rotation = Position.RotationEnum.TOP;
                 }
                 else
                 {
-                    // Physical right-hand upright is already correct.
-                    // Do not alter its proven Up / Below / Right arrangement.
+                    // Physical right-hand upright is already correct:
+                    // Up / Below / Right. Leave it untouched.
                     column.Position.Plane = Position.PlaneEnum.LEFT;
                     column.Position.Depth = Position.DepthEnum.FRONT;
                     column.Position.Rotation = Position.RotationEnum.BELOW;
@@ -912,7 +916,7 @@ namespace BeacomStair
                     name +
                     (leftSide
                         ? " [COLUMN: Down / Top / Right]"
-                        : " [COLUMN: Up / Below / Right (Plane LEFT in API)]"));
+                        : " [COLUMN: Up / Below / Right]"));
 
                 return column;
             }
