@@ -54,6 +54,7 @@ namespace BeacomStair
         public const double TopJointPlateLength = 180.0;
         public const double TopJointPlateDepth = 160.0;
         public const string BottomJoiningPlateProfile = "PL10*50";
+        public const double BottomJoiningPlateLength = 180.0;
         public const double BottomJoiningPlateLowerHeight = 117.8;
         public static double BottomStringerJointHeight
         {
@@ -857,10 +858,45 @@ namespace BeacomStair
                 plateY,
                 StairSettings.BottomJoiningPlateLowerHeight);
 
+            // Keep the proven angle and midpoint, but shorten the plate equally
+            // at both ends so it finishes clear of the PFC flanges for welding.
+            // 180 mm gives roughly 9 mm clearance at each end with this geometry.
+            double dx = lowerBackPoint.X - jointPoint.X;
+            double dy = lowerBackPoint.Y - jointPoint.Y;
+            double dz = lowerBackPoint.Z - jointPoint.Z;
+
+            double currentLength = Math.Sqrt(
+                (dx * dx) +
+                (dy * dy) +
+                (dz * dz));
+
+            if (currentLength <= StairSettings.BottomJoiningPlateLength)
+            {
+                throw new InvalidOperationException(
+                    "Bottom joining plate target length is longer than the available geometry.");
+            }
+
+            double trimEachEnd =
+                (currentLength - StairSettings.BottomJoiningPlateLength) / 2.0;
+
+            double ux = dx / currentLength;
+            double uy = dy / currentLength;
+            double uz = dz / currentLength;
+
+            Point trimmedStart = new Point(
+                jointPoint.X + (ux * trimEachEnd),
+                jointPoint.Y + (uy * trimEachEnd),
+                jointPoint.Z + (uz * trimEachEnd));
+
+            Point trimmedEnd = new Point(
+                lowerBackPoint.X - (ux * trimEachEnd),
+                lowerBackPoint.Y - (uy * trimEachEnd),
+                lowerBackPoint.Z - (uz * trimEachEnd));
+
             Beam joiningPlate = CreateTwoPointWebPlate(
                 "BEACOM BOTTOM JOINING PLATE " + side,
-                jointPoint,
-                lowerBackPoint);
+                trimmedStart,
+                trimmedEnd);
 
             CreateFilletWeld(
                 flightStringer,
