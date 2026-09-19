@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Tekla.Structures.Geometry3d;
 using Tekla.Structures.Model;
 
@@ -25,7 +26,7 @@ namespace BeacomStair
         public const double MidRailHeight = 550.0;
         public const double PlatformBeamReferenceDrop = 100.0;
 
-        public const string StringerProfile = "PFC200*75*23";
+        public const string StringerProfile = "PFC200X75X23";
         public const string TreadProfile = "PL8";
         public const string RiserProfile = "PL6";
         public const string RailProfile = "CHS42.4*3.2";
@@ -57,6 +58,7 @@ namespace BeacomStair
         private V3 _yAxis;
 
         private int _insertedObjectCount;
+        private readonly List<ModelObject> _insertedObjects = new List<ModelObject>();
 
         public StairBuilder(Model model)
         {
@@ -73,15 +75,23 @@ namespace BeacomStair
 
             CreateCoordinateSystem(startPoint, directionPoint);
 
-            CreatePlatform();
-            CreateFlight();
-            CreateGuarding();
-
-            return new StairBuildResult
+            try
             {
-                Rise = StairSettings.Rise,
-                InsertedObjectCount = _insertedObjectCount
-            };
+                CreatePlatform();
+                CreateFlight();
+                CreateGuarding();
+
+                return new StairBuildResult
+                {
+                    Rise = StairSettings.Rise,
+                    InsertedObjectCount = _insertedObjectCount
+                };
+            }
+            catch
+            {
+                DeleteInsertedObjects();
+                throw;
+            }
         }
 
         private void CreateCoordinateSystem(Point startPoint, Point directionPoint)
@@ -335,7 +345,9 @@ namespace BeacomStair
             beam.Position.Depth = Position.DepthEnum.MIDDLE;
             beam.Position.Rotation = Position.RotationEnum.FRONT;
 
-            InsertOrThrow(beam, name);
+            InsertOrThrow(
+                beam,
+                name + " [profile: " + profile + ", material: " + StairSettings.Material + "]");
         }
 
         private void CreatePlate(
@@ -362,7 +374,9 @@ namespace BeacomStair
             plate.AddContourPoint(new ContourPoint(p3, null));
             plate.AddContourPoint(new ContourPoint(p4, null));
 
-            InsertOrThrow(plate, name);
+            InsertOrThrow(
+                plate,
+                name + " [profile: " + profile + ", material: " + StairSettings.Material + "]");
         }
 
         private void InsertOrThrow(ModelObject modelObject, string description)
@@ -370,7 +384,27 @@ namespace BeacomStair
             if (!modelObject.Insert())
                 throw new InvalidOperationException("Tekla failed to insert: " + description);
 
+            _insertedObjects.Add(modelObject);
             _insertedObjectCount++;
+        }
+
+        private void DeleteInsertedObjects()
+        {
+            for (int i = _insertedObjects.Count - 1; i >= 0; i--)
+            {
+                try
+                {
+                    _insertedObjects[i].Delete();
+                }
+                catch
+                {
+                    // Keep cleaning up the remaining objects.
+                }
+            }
+
+            _model.CommitChanges();
+            _insertedObjects.Clear();
+            _insertedObjectCount = 0;
         }
 
         private struct V3
