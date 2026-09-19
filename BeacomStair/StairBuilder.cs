@@ -52,7 +52,7 @@ namespace BeacomStair
         public const double StringerJointPlateThickness = 10.0;
         public const double TopJointPlateLength = 180.0;
         public const double TopJointPlateDepth = 160.0;
-        public const double BottomJoiningPlateLength = 250.0;
+        public const double BottomJoiningPlateLength = 180.0;
         public const double BottomJoiningPlateWidth = 75.0;
         public static double BottomStringerJointHeight
         {
@@ -570,12 +570,11 @@ namespace BeacomStair
         {
             double halfLength = StairSettings.BasePlateLength / 2.0;
             double halfWidth = StairSettings.BasePlateWidth / 2.0;
-            // Both vertical PFCs use Horizontal = Right in Tekla, so their
-            // 180 mm section depth sits to the foot side of the insertion line.
-            // Shift the base plate half the PFC depth so it is centred beneath
-            // the actual steel footprint rather than beneath the insertion point.
+            // The proven Tekla column positioning puts the actual 180 mm PFC
+            // footprint on the wall/up-stair side of the insertion line.
+            // Centre the base plate under that real footprint.
             double x =
-                StairSettings.OverallLength + (StairSettings.StringerDepth / 2.0);
+                StairSettings.OverallLength - (StairSettings.StringerDepth / 2.0);
 
             double basePlateZ = StairSettings.BasePlateThickness / 2.0;
 
@@ -836,8 +835,11 @@ namespace BeacomStair
                 StairSettings.BottomStringerJointHeight +
                 (StairSettings.StringerJointPlateThickness / 2.0);
 
+            // The vertical PFC footprint runs from one section depth
+            // behind the joint up to the joint insertion line. Make the cap plate
+            // match that footprint exactly so it sits at the true intersection.
             double x1 =
-                StairSettings.OverallLength - StairSettings.BottomJoiningPlateLength;
+                StairSettings.OverallLength - StairSettings.StringerDepth;
 
             double x2 =
                 StairSettings.OverallLength;
