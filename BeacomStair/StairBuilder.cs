@@ -49,7 +49,7 @@ namespace BeacomStair
         public const double WallPlateHeight = 220.0;
         // Base plate is deliberately kept fully inside the PFC footprint.
         public const double BasePlateLength = 160.0;
-        public const double BasePlateWidth = 65.0;
+        public const double BasePlateWidth = 70.0;
         public const double BasePlateThickness = 10.0;
         public const double StringerJointPlateThickness = 10.0;
         public const string JoiningPlateProfile = "PL10*70";
@@ -576,33 +576,44 @@ namespace BeacomStair
             double halfLength = StairSettings.BasePlateLength / 2.0;
             double halfWidth = StairSettings.BasePlateWidth / 2.0;
 
-            // Proven column positioning puts the 180 mm PFC footprint on the
-            // wall/up-stair side of the insertion line. Centre the small base
-            // plate within that footprint: 160 x 65 fits wholly inside 180 x 75.
+            // Keep the 160 mm plate length wholly inside the 180 mm PFC depth:
+            // 10 mm clearance at each end.
             double x =
                 StairSettings.OverallLength - (StairSettings.StringerDepth / 2.0);
 
-            double basePlateZ = StairSettings.BasePlateThickness / 2.0;
+            // Apply exactly the same transverse positioning rule as the PL10x70
+            // joining plates. The outside edge of the 70 mm base plate is flush
+            // with the outside of the 75 mm PFC footprint, leaving 5 mm clear at
+            // the web side for the 6 mm fillet weld.
+            bool leftSide = y < 0.0;
+            double plateY =
+                GetJoiningPlateCentreY(y, leftSide);
+
+            double basePlateZ =
+                StairSettings.BasePlateThickness / 2.0;
 
             ContourPlate basePlate = CreatePlate(
                 "BEACOM BASE PLATE " + side,
                 StairSettings.EndPlateProfile,
-                LocalPoint(x - halfLength, y - halfWidth, basePlateZ),
-                LocalPoint(x + halfLength, y - halfWidth, basePlateZ),
-                LocalPoint(x + halfLength, y + halfWidth, basePlateZ),
-                LocalPoint(x - halfLength, y + halfWidth, basePlateZ),
+                LocalPoint(x - halfLength, plateY - halfWidth, basePlateZ),
+                LocalPoint(x + halfLength, plateY - halfWidth, basePlateZ),
+                LocalPoint(x + halfLength, plateY + halfWidth, basePlateZ),
+                LocalPoint(x - halfLength, plateY + halfWidth, basePlateZ),
                 "8");
 
-            CreateFilletWeld(stringer, basePlate, "BASE PLATE " + side + " TO PFC");
+            CreateFilletWeld(
+                stringer,
+                basePlate,
+                "BASE PLATE " + side + " TO PFC");
 
             Point firstBolt = LocalPoint(
                 x - (StairSettings.BaseAnchorBoltSpacing / 2.0),
-                y,
+                plateY,
                 basePlateZ);
 
             Point secondBolt = LocalPoint(
                 x + (StairSettings.BaseAnchorBoltSpacing / 2.0),
-                y,
+                plateY,
                 basePlateZ);
 
             CreateTwoBoltArray(
