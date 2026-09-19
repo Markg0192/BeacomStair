@@ -100,3 +100,10 @@ Their model extents remain from 10.00 mm above floor (top of base plate) to the 
 ## Bottom tread / upright joint
 
 The separate bottom stringer splice plate has been removed. On the bottom tread only, the tread end plate is PL10 and acts as the clean joint plate at the foot. Its two M12 fixings are separate bolt groups because they connect to different members: the front bolt connects the tread end plate to the short vertical PFC, while the rear bolt connects the same end plate to the sloping PFC. All other tread end plates remain PL8 with their normal two-bolt fixing to the sloping PFC.
+
+
+## Bottom joining plate and base plate
+
+The bottom tread split-bolt arrangement remains unchanged. A separate horizontal PL10 joining plate is now provided at each bottom corner, outside the 900 mm clear tread width, tying the sloping PFC to the short vertical PFC. The plate is 250 mm long by 75 mm wide.
+
+The base plate is now 320 × 180 × 10 and is shifted half the PFC depth toward the actual upright footprint so the plate is centred beneath the column rather than beneath its insertion line. The two M16 site anchors are at 250 mm centres to keep them clear of the PFC.
