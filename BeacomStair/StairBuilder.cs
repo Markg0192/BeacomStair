@@ -63,18 +63,15 @@ namespace BeacomStair
             _model = model ?? throw new ArgumentNullException(nameof(model));
         }
 
-        public StairBuildResult Build(Point edgeStart, Point edgeEnd, Point towardFoot)
+        public StairBuildResult Build(Point startPoint, Point directionPoint)
         {
-            if (edgeStart == null)
-                throw new ArgumentNullException(nameof(edgeStart));
+            if (startPoint == null)
+                throw new ArgumentNullException(nameof(startPoint));
 
-            if (edgeEnd == null)
-                throw new ArgumentNullException(nameof(edgeEnd));
+            if (directionPoint == null)
+                throw new ArgumentNullException(nameof(directionPoint));
 
-            if (towardFoot == null)
-                throw new ArgumentNullException(nameof(towardFoot));
-
-            CreateCoordinateSystem(edgeStart, edgeEnd, towardFoot);
+            CreateCoordinateSystem(startPoint, directionPoint);
 
             CreatePlatform();
             CreateFlight();
@@ -87,36 +84,27 @@ namespace BeacomStair
             };
         }
 
-        private void CreateCoordinateSystem(Point edgeStart, Point edgeEnd, Point towardFoot)
+        private void CreateCoordinateSystem(Point startPoint, Point directionPoint)
         {
-            V3 p1 = V3.FromPoint(edgeStart);
-            V3 p2 = V3.FromPoint(edgeEnd);
-            V3 footPoint = V3.FromPoint(towardFoot);
+            V3 start = V3.FromPoint(startPoint);
+            V3 direction = V3.FromPoint(directionPoint) - start;
 
-            _origin = (p1 + p2) * 0.5;
+            // The first pick is the centre of the top platform back edge.
+            // Only the horizontal direction of the second pick matters.
+            _origin = start;
+            direction = new V3(direction.X, direction.Y, 0.0);
 
-            V3 rawAcross = p2 - p1;
-            rawAcross = new V3(rawAcross.X, rawAcross.Y, 0.0);
-
-            if (rawAcross.Length < 1.0)
-                throw new InvalidOperationException("The two upper-floor edge points are too close together.");
-
-            _yAxis = rawAcross.Normalised();
-
-            V3 rawTowardFoot = footPoint - _origin;
-            rawTowardFoot = new V3(rawTowardFoot.X, rawTowardFoot.Y, 0.0);
-
-            // Remove any component along the picked edge so X is square to the edge.
-            V3 projectedTowardFoot = rawTowardFoot - (_yAxis * V3.Dot(rawTowardFoot, _yAxis));
-
-            if (projectedTowardFoot.Length < 1.0)
+            if (direction.Length < 1.0)
             {
                 throw new InvalidOperationException(
-                    "The stair-foot point is too close to the line of the picked upper-floor edge. " +
-                    "Pick a point clearly out in the direction the stair should run.");
+                    "The direction point is too close to the start point. " +
+                    "Pick a second point clearly in the direction the stair should run.");
             }
 
-            _xAxis = projectedTowardFoot.Normalised();
+            _xAxis = direction.Normalised();
+
+            // Width is fixed, so the cross-stair axis is simply 90 degrees to the run.
+            _yAxis = new V3(-_xAxis.Y, _xAxis.X, 0.0);
         }
 
         private void CreatePlatform()
