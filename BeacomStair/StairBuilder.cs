@@ -53,7 +53,7 @@ namespace BeacomStair
         public const double StringerJointPlateThickness = 10.0;
         public const double TopJointPlateLength = 180.0;
         public const double TopJointPlateDepth = 160.0;
-        public const double BottomJoiningPlateLength = 250.0;
+        public const double BottomJoiningPlateLength = 180.0;
         public const double BottomJoiningPlateWidth = 75.0;
         public static double BottomStringerJointHeight
         {
@@ -267,6 +267,25 @@ namespace BeacomStair
                     StairSettings.BottomStringerJointHeight),
                 "2",
                 true);
+
+            // Trim the physical bottom end of each sloping PFC horizontally.
+            // The PL10 joining plate then sits between this cut face and the top
+            // of the short vertical PFC.
+            double bottomJoiningPlateTopZ =
+                StairSettings.BottomStringerJointHeight +
+                StairSettings.StringerJointPlateThickness;
+
+            CreateHorizontalFitting(
+                leftStringer,
+                -halfStringerSpacing,
+                bottomJoiningPlateTopZ,
+                "LEFT FLIGHT STRINGER BOTTOM CUT");
+
+            CreateHorizontalFitting(
+                rightStringer,
+                halfStringerSpacing,
+                bottomJoiningPlateTopZ,
+                "RIGHT FLIGHT STRINGER BOTTOM CUT");
 
             double basePlateTopZ = StairSettings.BasePlateThickness;
 
@@ -827,9 +846,19 @@ namespace BeacomStair
             double stringerY,
             string side)
         {
-            // Sloping PL10 joining plate at the bottom intersection.
-            // It starts at the vertical-PFC / sloping-PFC joint and runs uphill
-            // parallel to the stair pitch, matching the detail shown in the model.
+            // Horizontal PL10 joining plate:
+            // bottom face sits on the 201.33 mm top of the vertical PFC,
+            // top face is at 211.33 mm where the sloping PFC is fitted flat.
+            double plateCentreZ =
+                StairSettings.BottomStringerJointHeight +
+                (StairSettings.StringerJointPlateThickness / 2.0);
+
+            double x1 =
+                StairSettings.OverallLength - StairSettings.BottomJoiningPlateLength;
+
+            double x2 =
+                StairSettings.OverallLength;
+
             double outward =
                 stringerY < 0.0 ? -1.0 : 1.0;
 
@@ -837,26 +866,13 @@ namespace BeacomStair
             double y2 =
                 stringerY + (outward * StairSettings.BottomJoiningPlateWidth);
 
-            double xBottom = StairSettings.OverallLength;
-            double xTop =
-                StairSettings.OverallLength - StairSettings.BottomJoiningPlateLength;
-
-            double zBottom =
-                StairSettings.BottomStringerJointHeight +
-                (StairSettings.StringerJointPlateThickness / 2.0);
-
-            double zTop =
-                zBottom +
-                (StairSettings.BottomJoiningPlateLength *
-                 (StairSettings.Rise / StairSettings.Going));
-
             ContourPlate plate = CreatePlate(
                 "BEACOM BOTTOM JOINING PLATE " + side,
                 StairSettings.EndPlateProfile,
-                LocalPoint(xTop, y1, zTop),
-                LocalPoint(xBottom, y1, zBottom),
-                LocalPoint(xBottom, y2, zBottom),
-                LocalPoint(xTop, y2, zTop),
+                LocalPoint(x1, y1, plateCentreZ),
+                LocalPoint(x2, y1, plateCentreZ),
+                LocalPoint(x2, y2, plateCentreZ),
+                LocalPoint(x1, y2, plateCentreZ),
                 "8");
 
             CreateFilletWeld(
@@ -868,6 +884,34 @@ namespace BeacomStair
                 verticalPfc,
                 plate,
                 "BOTTOM JOINING PLATE " + side + " TO VERTICAL PFC");
+        }
+
+        private void CreateHorizontalFitting(
+            Beam beam,
+            double stringerY,
+            double cutZ,
+            string description)
+        {
+            Fitting fitting = new Fitting
+            {
+                Plane = new Tekla.Structures.Model.Plane(),
+                Father = beam
+            };
+
+            fitting.Plane.Origin =
+                LocalPoint(StairSettings.OverallLength, stringerY, cutZ);
+
+            // Both axes lie in the horizontal plane, so the fitting normal is
+            // vertical and the PFC end is cut level.
+            fitting.Plane.AxisX =
+                new Vector(_xAxis.X, _xAxis.Y, 0.0);
+
+            fitting.Plane.AxisY =
+                new Vector(_yAxis.X, _yAxis.Y, 0.0);
+
+            InsertOrThrow(
+                fitting,
+                description + " [horizontal fitting at Z=" + cutZ.ToString("0.00") + "]");
         }
 
         private Beam CreateVerticalPfcBeam(
