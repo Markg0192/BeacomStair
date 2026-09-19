@@ -31,18 +31,25 @@ namespace BeacomStair
         public const string Material = "S355JR";
 
         // Tread detail: horizontal PL10 tread with a vertical plate at each side.
-        public const double TreadSidePlateLength = 200.0;
-        public const double TreadSidePlateHeight = 100.0;
+        public const double TreadSidePlateLength = 150.0;
+        public const double TreadSidePlateHeight = 80.0;
         public const double TreadSidePlateThickness = 8.0;
         public const double TreadPlateThickness = 10.0;
         public const double TreadBoltSize = 12.0;
-        public const double TreadBoltSpacing = 100.0;
+        public const double TreadBoltSpacing = 75.0;
 
         // Top and bottom connections.
         public const double WallPlateWidth = 180.0;
         public const double WallPlateHeight = 220.0;
         public const double BasePlateLength = 220.0;
         public const double BasePlateWidth = 180.0;
+        public const double BasePlateThickness = 10.0;
+        public const double StringerJointPlateThickness = 10.0;
+        public const double TopJointPlateLength = 180.0;
+        public const double TopJointPlateDepth = 160.0;
+        public const double BottomJointPlateLength = 160.0;
+        public const double BottomJointPlateDepth = 180.0;
+        public const double BottomStringerJointHeight = 250.0;
         public const double AnchorBoltSize = 16.0;
         public const double AnchorBoltSpacing = 100.0;
         public const string BoltStandard = "8.8XOX";
@@ -94,6 +101,8 @@ namespace BeacomStair
         {
             public Beam LeftStringer { get; set; }
             public Beam RightStringer { get; set; }
+            public Beam LeftBottomPost { get; set; }
+            public Beam RightBottomPost { get; set; }
             public List<ContourPlate> Treads { get; } = new List<ContourPlate>();
         }
 
@@ -167,16 +176,20 @@ namespace BeacomStair
         {
             double halfWidth = StairSettings.TreadWidth / 2.0;
             double halfStringerSpacing = StairSettings.StringerSpacing / 2.0;
-            double platformZ = StairSettings.TotalRise;
-            double stringerTopZ = platformZ - (StairSettings.TreadPlateThickness / 2.0);
+            double platformTopZ = StairSettings.TotalRise;
+            double platformPlateZ =
+                platformTopZ - (StairSettings.TreadPlateThickness / 2.0);
+
+            double stringerTopZ =
+                platformTopZ - StairSettings.TreadPlateThickness;
 
             ContourPlate deck = CreatePlate(
                 "BEACOM PLATFORM",
                 StairSettings.TreadProfile,
-                LocalPoint(0.0, -halfWidth, platformZ),
-                LocalPoint(StairSettings.PlatformLength, -halfWidth, platformZ),
-                LocalPoint(StairSettings.PlatformLength, halfWidth, platformZ),
-                LocalPoint(0.0, halfWidth, platformZ),
+                LocalPoint(0.0, -halfWidth, platformPlateZ),
+                LocalPoint(StairSettings.PlatformLength, -halfWidth, platformPlateZ),
+                LocalPoint(StairSettings.PlatformLength, halfWidth, platformPlateZ),
+                LocalPoint(0.0, halfWidth, platformPlateZ),
                 "3");
 
             // PFC flat webs face inward toward the stair and the open channel/toes
@@ -216,42 +229,100 @@ namespace BeacomStair
             // The stringer reference line follows the tread-pitch line from the
             // platform edge to the front of the bottom tread. Depth=BEHIND keeps
             // the PFC below that line instead of centring it through the treads.
+            double flightTopZ =
+                StairSettings.TotalRise - StairSettings.TreadPlateThickness;
+
             Beam leftStringer = CreatePfcBeam(
                 "BEACOM FLIGHT STRINGER L",
-                LocalPoint(StairSettings.PlatformLength, -halfStringerSpacing, StairSettings.TotalRise),
-                LocalPoint(StairSettings.OverallLength, -halfStringerSpacing, StairSettings.StringerDepth),
+                LocalPoint(StairSettings.PlatformLength, -halfStringerSpacing, flightTopZ),
+                LocalPoint(
+                    StairSettings.OverallLength,
+                    -halfStringerSpacing,
+                    StairSettings.BottomStringerJointHeight),
                 "2",
                 false);
 
             Beam rightStringer = CreatePfcBeam(
                 "BEACOM FLIGHT STRINGER R",
-                LocalPoint(StairSettings.PlatformLength, halfStringerSpacing, StairSettings.TotalRise),
-                LocalPoint(StairSettings.OverallLength, halfStringerSpacing, StairSettings.StringerDepth),
+                LocalPoint(StairSettings.PlatformLength, halfStringerSpacing, flightTopZ),
+                LocalPoint(
+                    StairSettings.OverallLength,
+                    halfStringerSpacing,
+                    StairSettings.BottomStringerJointHeight),
                 "2",
                 true);
 
-            CreateFilletWeld(platform.LeftStringer, leftStringer, "LEFT PLATFORM PFC TO FLIGHT PFC");
-            CreateFilletWeld(platform.RightStringer, rightStringer, "RIGHT PLATFORM PFC TO FLIGHT PFC");
+            double basePlateTopZ = StairSettings.BasePlateThickness;
+
+            Beam leftBottomPost = CreateVerticalPfcBeam(
+                "BEACOM BOTTOM VERTICAL PFC L",
+                StairSettings.OverallLength,
+                -halfStringerSpacing,
+                basePlateTopZ,
+                StairSettings.BottomStringerJointHeight,
+                false);
+
+            Beam rightBottomPost = CreateVerticalPfcBeam(
+                "BEACOM BOTTOM VERTICAL PFC R",
+                StairSettings.OverallLength,
+                halfStringerSpacing,
+                basePlateTopZ,
+                StairSettings.BottomStringerJointHeight,
+                true);
+
+            CreateTopStringerJointPlate(
+                platform.LeftStringer,
+                leftStringer,
+                -halfStringerSpacing,
+                true,
+                "L");
+
+            CreateTopStringerJointPlate(
+                platform.RightStringer,
+                rightStringer,
+                halfStringerSpacing,
+                false,
+                "R");
+
+            CreateBottomStringerJointPlate(
+                leftStringer,
+                leftBottomPost,
+                -halfStringerSpacing,
+                true,
+                "L");
+
+            CreateBottomStringerJointPlate(
+                rightStringer,
+                rightBottomPost,
+                halfStringerSpacing,
+                false,
+                "R");
 
             FlightParts result = new FlightParts
             {
                 LeftStringer = leftStringer,
-                RightStringer = rightStringer
+                RightStringer = rightStringer,
+                LeftBottomPost = leftBottomPost,
+                RightBottomPost = rightBottomPost
             };
 
             for (int i = 0; i < StairSettings.TreadCount; i++)
             {
                 double x1 = StairSettings.PlatformLength + (i * StairSettings.Going);
                 double x2 = x1 + StairSettings.Going;
-                double z = StairSettings.TotalRise - ((i + 1) * rise);
+                double treadTopZ =
+                    StairSettings.TotalRise - ((i + 1) * rise);
+
+                double treadPlateZ =
+                    treadTopZ - (StairSettings.TreadPlateThickness / 2.0);
 
                 ContourPlate tread = CreatePlate(
                     "BEACOM TREAD " + (i + 1),
                     StairSettings.TreadProfile,
-                    LocalPoint(x1, -halfWidth, z),
-                    LocalPoint(x2, -halfWidth, z),
-                    LocalPoint(x2, halfWidth, z),
-                    LocalPoint(x1, halfWidth, z),
+                    LocalPoint(x1, -halfWidth, treadPlateZ),
+                    LocalPoint(x2, -halfWidth, treadPlateZ),
+                    LocalPoint(x2, halfWidth, treadPlateZ),
+                    LocalPoint(x1, halfWidth, treadPlateZ),
                     "4");
 
                 result.Treads.Add(tread);
@@ -260,7 +331,7 @@ namespace BeacomStair
                     tread,
                     leftStringer,
                     x1,
-                    z,
+                    treadTopZ,
                     -halfStringerSpacing,
                     true,
                     i + 1);
@@ -269,7 +340,7 @@ namespace BeacomStair
                     tread,
                     rightStringer,
                     x1,
-                    z,
+                    treadTopZ,
                     halfStringerSpacing,
                     false,
                     i + 1);
@@ -299,7 +370,7 @@ namespace BeacomStair
                 sidePlateX1 + StairSettings.TreadSidePlateLength;
 
             double sidePlateTopZ =
-                treadZ - (StairSettings.TreadPlateThickness / 2.0);
+                treadZ - StairSettings.TreadPlateThickness;
 
             double sidePlateBottomZ =
                 sidePlateTopZ - StairSettings.TreadSidePlateHeight;
@@ -394,8 +465,8 @@ namespace BeacomStair
             CreateWallConnection(platform.LeftStringer, -halfStringerSpacing, "L");
             CreateWallConnection(platform.RightStringer, halfStringerSpacing, "R");
 
-            CreateBaseConnection(flight.LeftStringer, -halfStringerSpacing, "L");
-            CreateBaseConnection(flight.RightStringer, halfStringerSpacing, "R");
+            CreateBaseConnection(flight.LeftBottomPost, -halfStringerSpacing, "L");
+            CreateBaseConnection(flight.RightBottomPost, halfStringerSpacing, "R");
         }
 
         private void CreateWallConnection(Beam stringer, double y, string side)
@@ -407,16 +478,16 @@ namespace BeacomStair
             ContourPlate wallPlate = CreatePlate(
                 "BEACOM WALL END PLATE " + side,
                 StairSettings.EndPlateProfile,
-                LocalPoint(0.0, y - halfWidth, centreZ - halfHeight),
-                LocalPoint(0.0, y + halfWidth, centreZ - halfHeight),
-                LocalPoint(0.0, y + halfWidth, centreZ + halfHeight),
-                LocalPoint(0.0, y - halfWidth, centreZ + halfHeight),
+                LocalPoint(5.0, y - halfWidth, centreZ - halfHeight),
+                LocalPoint(5.0, y + halfWidth, centreZ - halfHeight),
+                LocalPoint(5.0, y + halfWidth, centreZ + halfHeight),
+                LocalPoint(5.0, y - halfWidth, centreZ + halfHeight),
                 "8");
 
             CreateFilletWeld(stringer, wallPlate, "WALL END PLATE " + side + " TO PFC");
 
-            Point lowerBolt = LocalPoint(0.0, y, centreZ - (StairSettings.AnchorBoltSpacing / 2.0));
-            Point upperBolt = LocalPoint(0.0, y, centreZ + (StairSettings.AnchorBoltSpacing / 2.0));
+            Point lowerBolt = LocalPoint(5.0, y, centreZ - (StairSettings.AnchorBoltSpacing / 2.0));
+            Point upperBolt = LocalPoint(5.0, y, centreZ + (StairSettings.AnchorBoltSpacing / 2.0));
 
             // There is no concrete wall object selected by this tool. Self-referencing
             // the plate lets Tekla create the two site bolt objects as the anchor
@@ -438,13 +509,15 @@ namespace BeacomStair
             double halfWidth = StairSettings.BasePlateWidth / 2.0;
             double x = StairSettings.OverallLength;
 
+            double basePlateZ = StairSettings.BasePlateThickness / 2.0;
+
             ContourPlate basePlate = CreatePlate(
                 "BEACOM BASE PLATE " + side,
                 StairSettings.EndPlateProfile,
-                LocalPoint(x - halfLength, y - halfWidth, 0.0),
-                LocalPoint(x + halfLength, y - halfWidth, 0.0),
-                LocalPoint(x + halfLength, y + halfWidth, 0.0),
-                LocalPoint(x - halfLength, y + halfWidth, 0.0),
+                LocalPoint(x - halfLength, y - halfWidth, basePlateZ),
+                LocalPoint(x + halfLength, y - halfWidth, basePlateZ),
+                LocalPoint(x + halfLength, y + halfWidth, basePlateZ),
+                LocalPoint(x - halfLength, y + halfWidth, basePlateZ),
                 "8");
 
             CreateFilletWeld(stringer, basePlate, "BASE PLATE " + side + " TO PFC");
@@ -452,12 +525,12 @@ namespace BeacomStair
             Point firstBolt = LocalPoint(
                 x - (StairSettings.AnchorBoltSpacing / 2.0),
                 y,
-                0.0);
+                basePlateZ);
 
             Point secondBolt = LocalPoint(
                 x + (StairSettings.AnchorBoltSpacing / 2.0),
                 y,
-                0.0);
+                basePlateZ);
 
             CreateTwoBoltArray(
                 basePlate,
@@ -616,8 +689,11 @@ namespace BeacomStair
             double distance = x - StairSettings.PlatformLength;
             double ratio = distance / StairSettings.FlightRun;
 
-            return StairSettings.TotalRise -
-                   (ratio * (StairSettings.TotalRise - StairSettings.StringerDepth));
+            double topZ =
+                StairSettings.TotalRise - StairSettings.TreadPlateThickness;
+
+            return topZ -
+                   (ratio * (topZ - StairSettings.BottomStringerJointHeight));
         }
 
         private Point LocalPoint(double x, double y, double z)
@@ -629,6 +705,133 @@ namespace BeacomStair
                 new V3(0.0, 0.0, z);
 
             return result.ToPoint();
+        }
+
+        private void CreateTopStringerJointPlate(
+            Beam platformStringer,
+            Beam flightStringer,
+            double stringerY,
+            bool leftSide,
+            string side)
+        {
+            double plateY = leftSide
+                ? stringerY + (StairSettings.StringerJointPlateThickness / 2.0)
+                : stringerY - (StairSettings.StringerJointPlateThickness / 2.0);
+
+            double x1 =
+                StairSettings.PlatformLength -
+                (StairSettings.TopJointPlateLength / 2.0);
+
+            double x2 =
+                StairSettings.PlatformLength +
+                (StairSettings.TopJointPlateLength / 2.0);
+
+            double topZ =
+                StairSettings.TotalRise - StairSettings.TreadPlateThickness;
+
+            double bottomZ = topZ - StairSettings.TopJointPlateDepth;
+
+            ContourPlate plate = CreatePlate(
+                "BEACOM TOP STRINGER JOINT PLATE " + side,
+                StairSettings.EndPlateProfile,
+                LocalPoint(x1, plateY, topZ),
+                LocalPoint(x2, plateY, topZ),
+                LocalPoint(x2, plateY, bottomZ),
+                LocalPoint(x1, plateY, bottomZ),
+                "8");
+
+            CreateFilletWeld(
+                platformStringer,
+                plate,
+                "TOP JOINT PLATE " + side + " TO PLATFORM PFC");
+
+            CreateFilletWeld(
+                flightStringer,
+                plate,
+                "TOP JOINT PLATE " + side + " TO FLIGHT PFC");
+        }
+
+        private void CreateBottomStringerJointPlate(
+            Beam flightStringer,
+            Beam verticalPfc,
+            double stringerY,
+            bool leftSide,
+            string side)
+        {
+            double plateY = leftSide
+                ? stringerY + (StairSettings.StringerJointPlateThickness / 2.0)
+                : stringerY - (StairSettings.StringerJointPlateThickness / 2.0);
+
+            double x1 =
+                StairSettings.OverallLength -
+                StairSettings.BottomJointPlateLength;
+
+            double x2 = StairSettings.OverallLength;
+
+            double topZ =
+                StairSettings.BottomStringerJointHeight +
+                (StairSettings.BottomJointPlateDepth / 2.0);
+
+            double bottomZ =
+                StairSettings.BottomStringerJointHeight -
+                (StairSettings.BottomJointPlateDepth / 2.0);
+
+            ContourPlate plate = CreatePlate(
+                "BEACOM BOTTOM STRINGER JOINT PLATE " + side,
+                StairSettings.EndPlateProfile,
+                LocalPoint(x1, plateY, topZ),
+                LocalPoint(x2, plateY, topZ),
+                LocalPoint(x2, plateY, bottomZ),
+                LocalPoint(x1, plateY, bottomZ),
+                "8");
+
+            CreateFilletWeld(
+                flightStringer,
+                plate,
+                "BOTTOM JOINT PLATE " + side + " TO FLIGHT PFC");
+
+            CreateFilletWeld(
+                verticalPfc,
+                plate,
+                "BOTTOM JOINT PLATE " + side + " TO VERTICAL PFC");
+        }
+
+        private Beam CreateVerticalPfcBeam(
+            string name,
+            double x,
+            double y,
+            double bottomZ,
+            double topZ,
+            bool reverseDirection)
+        {
+            Point nominalStart = LocalPoint(x, y, bottomZ);
+            Point nominalEnd = LocalPoint(x, y, topZ);
+
+            Point start = reverseDirection ? nominalEnd : nominalStart;
+            Point end = reverseDirection ? nominalStart : nominalEnd;
+
+            Beam beam = new Beam(start, end)
+            {
+                Name = name,
+                Class = "2"
+            };
+
+            beam.Profile.ProfileString = StairSettings.StringerProfile;
+            beam.Material.MaterialString = StairSettings.Material;
+
+            // Keep the same left/right handedness philosophy as the sloping PFCs.
+            // The short vertical piece is centred on the foot datum and ends directly
+            // on top of the base plate.
+            beam.Position.Plane = Position.PlaneEnum.RIGHT;
+            beam.Position.Depth = Position.DepthEnum.MIDDLE;
+            beam.Position.Rotation = Position.RotationEnum.TOP;
+
+            InsertOrThrow(
+                beam,
+                name + " [vertical " + StairSettings.StringerProfile +
+                ", plane: RIGHT, rotation: TOP]");
+
+            return beam;
         }
 
         private Beam CreatePfcBeam(
