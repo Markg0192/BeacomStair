@@ -52,10 +52,10 @@ namespace BeacomStair
         public const double BasePlateWidth = 65.0;
         public const double BasePlateThickness = 10.0;
         public const double StringerJointPlateThickness = 10.0;
-        public const double TopJointPlateLength = 180.0;
-        public const double TopJointPlateDepth = 160.0;
-        public const string BottomJoiningPlateProfile = "PL10*50";
-        public const double BottomJoiningPlateLength = 180.0;
+        public const string JoiningPlateProfile = "PL10*70";
+        public const double JoiningPlateWidth = 70.0;
+        public const double JoiningPlateLength = 180.0;
+        public const double JoiningPlateWeldGap = 5.0;
         public const double BottomJoiningPlateLowerHeight = 117.8;
         public static double BottomStringerJointHeight
         {
@@ -788,41 +788,92 @@ namespace BeacomStair
             bool leftSide,
             string side)
         {
-            double plateY = leftSide
-                ? stringerY + (StairSettings.StringerJointPlateThickness / 2.0)
-                : stringerY - (StairSettings.StringerJointPlateThickness / 2.0);
+            // Same detailing philosophy as the bottom joint:
+            // PL10x70 two-point plate, exact 180 mm finished length, outside edge
+            // flush with the outside of the 75 mm PFC footprint, leaving 5 mm
+            // clear at the web side for the 6 mm fillet weld.
+            double plateY = GetJoiningPlateCentreY(stringerY, leftSide);
 
-            double x1 =
-                StairSettings.PlatformLength -
-                (StairSettings.TopJointPlateLength / 2.0);
-
-            double x2 =
-                StairSettings.PlatformLength +
-                (StairSettings.TopJointPlateLength / 2.0);
-
-            double topZ =
+            double jointX = StairSettings.PlatformLength;
+            double jointZ =
                 StairSettings.TotalRise - StairSettings.TreadPlateThickness;
 
-            double bottomZ = topZ - StairSettings.TopJointPlateDepth;
+            // At the top joint the member directions away from the intersection are:
+            // platform PFC -> back toward the wall (-X)
+            // flight PFC   -> down the stair (+X, -Z)
+            //
+            // Their unit-vector sum gives the internal angle bisector, which puts
+            // the joining plate naturally between the two PFC webs.
+            double slope =
+                StairSettings.Rise / StairSettings.Going;
 
-            ContourPlate plate = CreatePlate(
-                "BEACOM TOP STRINGER JOINT PLATE " + side,
-                StairSettings.EndPlateProfile,
-                LocalPoint(x1, plateY, topZ),
-                LocalPoint(x2, plateY, topZ),
-                LocalPoint(x2, plateY, bottomZ),
-                LocalPoint(x1, plateY, bottomZ),
-                "8");
+            double flightLengthFactor =
+                Math.Sqrt(1.0 + (slope * slope));
+
+            double flightUx =
+                1.0 / flightLengthFactor;
+
+            double flightUz =
+                -slope / flightLengthFactor;
+
+            double bisectorX =
+                -1.0 + flightUx;
+
+            double bisectorZ =
+                flightUz;
+
+            double bisectorLength =
+                Math.Sqrt(
+                    (bisectorX * bisectorX) +
+                    (bisectorZ * bisectorZ));
+
+            bisectorX /= bisectorLength;
+            bisectorZ /= bisectorLength;
+
+            // Use one full PFC depth vertically to establish the untrimmed line,
+            // then round the finished two-point plate to exactly 180 mm.
+            double rawLength =
+                StairSettings.StringerDepth / Math.Abs(bisectorZ);
+
+            Point rawStart = LocalPoint(
+                jointX,
+                plateY,
+                jointZ);
+
+            Point rawEnd = LocalPoint(
+                jointX + (bisectorX * rawLength),
+                plateY,
+                jointZ + (bisectorZ * rawLength));
+
+            GetTrimmedJoiningPlatePoints(
+                rawStart,
+                rawEnd,
+                out Point trimmedStart,
+                out Point trimmedEnd);
+
+            Beam joiningPlate = CreateTwoPointWebPlate(
+                "BEACOM TOP JOINING PLATE " + side,
+                trimmedStart,
+                trimmedEnd);
+
+            // Platform PFC is on the upper side of this plate; flight PFC is on
+            // the lower side. Cut them parallel to the plate, 5 mm either side.
+            CreateJoiningPlateClearanceCuts(
+                platformStringer,
+                flightStringer,
+                trimmedStart,
+                trimmedEnd,
+                "TOP PFC CLEARANCE " + side);
 
             CreateFilletWeld(
                 platformStringer,
-                plate,
-                "TOP JOINT PLATE " + side + " TO PLATFORM PFC");
+                joiningPlate,
+                "TOP JOINING PLATE " + side + " TO PLATFORM PFC");
 
             CreateFilletWeld(
                 flightStringer,
-                plate,
-                "TOP JOINT PLATE " + side + " TO FLIGHT PFC");
+                joiningPlate,
+                "TOP JOINING PLATE " + side + " TO FLIGHT PFC");
         }
 
         private void CreateBottomJoiningPlate(
@@ -832,20 +883,10 @@ namespace BeacomStair
             bool leftSide,
             string side)
         {
-            // Two-point PL10x50 diagonal exactly across the vertical PFC web.
-            //
-            // Point 1 = the actual top/front meeting point of the sloping and
-            //           vertical PFCs at Z = 201.33 mm.
-            // Point 2 = the opposite edge of the 180 mm PFC footprint at
-            //           Z = 100 mm.
-            //
-            // This matches the short diagonal shown in the user's marked-up
-            // side elevation instead of running up the sloping stringer.
-            // Centre the 50 mm plate within the full 75 mm PFC footprint.
-            // This leaves 12.5 mm of PFC footprint visible on each side.
-            double plateY = leftSide
-                ? stringerY - (StairSettings.StringerWidth / 2.0)
-                : stringerY + (StairSettings.StringerWidth / 2.0);
+            // Keep the bottom geometry already proven in the model, but make the
+            // plate PL10x70 and place it flush with the outside of the 75 mm PFC
+            // footprint. This leaves 5 mm clear at the web side for welding.
+            double plateY = GetJoiningPlateCentreY(stringerY, leftSide);
 
             Point jointPoint = LocalPoint(
                 StairSettings.OverallLength,
@@ -857,55 +898,20 @@ namespace BeacomStair
                 plateY,
                 StairSettings.BottomJoiningPlateLowerHeight);
 
-            // Keep the proven angle and midpoint, but shorten the plate equally
-            // at both ends so it finishes clear of the PFC flanges for welding.
-            // 180 mm gives roughly 9 mm clearance at each end with this geometry.
-            double dx = lowerBackPoint.X - jointPoint.X;
-            double dy = lowerBackPoint.Y - jointPoint.Y;
-            double dz = lowerBackPoint.Z - jointPoint.Z;
+            Point trimmedStart;
+            Point trimmedEnd;
 
-            double currentLength = Math.Sqrt(
-                (dx * dx) +
-                (dy * dy) +
-                (dz * dz));
-
-            if (currentLength <= StairSettings.BottomJoiningPlateLength)
-            {
-                throw new InvalidOperationException(
-                    "Bottom joining plate target length is longer than the available geometry.");
-            }
-
-            double totalTrim =
-                currentLength - StairSettings.BottomJoiningPlateLength;
-
-            // Keep the exact 180 mm finished length, but give the upper end
-            // 2 mm more clearance than the lower end.
-            double topTrim = (totalTrim / 2.0) + 1.0;
-            double bottomTrim = (totalTrim / 2.0) - 1.0;
-
-            double ux = dx / currentLength;
-            double uy = dy / currentLength;
-            double uz = dz / currentLength;
-
-            Point trimmedStart = new Point(
-                jointPoint.X + (ux * topTrim),
-                jointPoint.Y + (uy * topTrim),
-                jointPoint.Z + (uz * topTrim));
-
-            Point trimmedEnd = new Point(
-                lowerBackPoint.X - (ux * bottomTrim),
-                lowerBackPoint.Y - (uy * bottomTrim),
-                lowerBackPoint.Z - (uz * bottomTrim));
+            GetTrimmedJoiningPlatePoints(
+                jointPoint,
+                lowerBackPoint,
+                out trimmedStart,
+                out trimmedEnd);
 
             Beam joiningPlate = CreateTwoPointWebPlate(
                 "BEACOM BOTTOM JOINING PLATE " + side,
                 trimmedStart,
                 trimmedEnd);
 
-            // Leave both member nodes untouched. Create two fitting planes
-            // parallel to the joining plate centreline, offset 5 mm either side
-            // perpendicular to the plate. This creates a 10 mm clear slot for
-            // the PL10 joining plate.
             CreateJoiningPlateClearanceCuts(
                 flightStringer,
                 verticalPfc,
@@ -916,17 +922,77 @@ namespace BeacomStair
             CreateFilletWeld(
                 flightStringer,
                 joiningPlate,
-                "BOTTOM TWO-POINT JOINING PLATE " + side + " TO SLOPING PFC");
+                "BOTTOM JOINING PLATE " + side + " TO SLOPING PFC");
 
             CreateFilletWeld(
                 verticalPfc,
                 joiningPlate,
-                "BOTTOM TWO-POINT JOINING PLATE " + side + " TO VERTICAL PFC");
+                "BOTTOM JOINING PLATE " + side + " TO VERTICAL PFC");
+        }
+
+        private double GetJoiningPlateCentreY(
+            double stringerY,
+            bool leftSide)
+        {
+            // PFC reference line is the inward web-face datum.
+            // PL10x70 is pushed outward until its outside edge is flush with the
+            // 75 mm PFC footprint. That leaves exactly 5 mm at the web side.
+            double centreOffset =
+                StairSettings.StringerWidth -
+                (StairSettings.JoiningPlateWidth / 2.0);
+
+            return leftSide
+                ? stringerY - centreOffset
+                : stringerY + centreOffset;
+        }
+
+        private void GetTrimmedJoiningPlatePoints(
+            Point rawStart,
+            Point rawEnd,
+            out Point trimmedStart,
+            out Point trimmedEnd)
+        {
+            double dx = rawEnd.X - rawStart.X;
+            double dy = rawEnd.Y - rawStart.Y;
+            double dz = rawEnd.Z - rawStart.Z;
+
+            double currentLength = Math.Sqrt(
+                (dx * dx) +
+                (dy * dy) +
+                (dz * dz));
+
+            if (currentLength <= StairSettings.JoiningPlateLength)
+            {
+                throw new InvalidOperationException(
+                    "Joining plate target length is longer than the available geometry.");
+            }
+
+            double totalTrim =
+                currentLength - StairSettings.JoiningPlateLength;
+
+            // Keep the exact 180 mm fabrication length. As agreed at the bottom,
+            // give the upper/start end 2 mm more clearance than the lower/end.
+            double startTrim = (totalTrim / 2.0) + 1.0;
+            double endTrim = (totalTrim / 2.0) - 1.0;
+
+            double ux = dx / currentLength;
+            double uy = dy / currentLength;
+            double uz = dz / currentLength;
+
+            trimmedStart = new Point(
+                rawStart.X + (ux * startTrim),
+                rawStart.Y + (uy * startTrim),
+                rawStart.Z + (uz * startTrim));
+
+            trimmedEnd = new Point(
+                rawEnd.X - (ux * endTrim),
+                rawEnd.Y - (uy * endTrim),
+                rawEnd.Z - (uz * endTrim));
         }
 
         private void CreateJoiningPlateClearanceCuts(
-            Beam flightStringer,
-            Beam verticalPfc,
+            Beam upperPart,
+            Beam lowerPart,
             Point plateStart,
             Point plateEnd,
             string description)
@@ -966,27 +1032,30 @@ namespace BeacomStair
                 (plateStart.Y + plateEnd.Y) / 2.0,
                 (plateStart.Z + plateEnd.Z) / 2.0);
 
+            double halfPlateThickness =
+                StairSettings.StringerJointPlateThickness / 2.0;
+
             Point upperCutOrigin = new Point(
-                midPoint.X + (perpendicular.X * 5.0),
-                midPoint.Y + (perpendicular.Y * 5.0),
-                midPoint.Z + (perpendicular.Z * 5.0));
+                midPoint.X + (perpendicular.X * halfPlateThickness),
+                midPoint.Y + (perpendicular.Y * halfPlateThickness),
+                midPoint.Z + (perpendicular.Z * halfPlateThickness));
 
             Point lowerCutOrigin = new Point(
-                midPoint.X - (perpendicular.X * 5.0),
-                midPoint.Y - (perpendicular.Y * 5.0),
-                midPoint.Z - (perpendicular.Z * 5.0));
+                midPoint.X - (perpendicular.X * halfPlateThickness),
+                midPoint.Y - (perpendicular.Y * halfPlateThickness),
+                midPoint.Z - (perpendicular.Z * halfPlateThickness));
 
-            // Sloping PFC: cut on the upper side of the PL10 plate.
+            // Upper member: cut on the upper side of the PL10 plate.
             CreateParallelFitting(
-                flightStringer,
+                upperPart,
                 upperCutOrigin,
                 acrossStair,
                 plateDirection,
                 description + " - FLIGHT +5MM");
 
-            // Vertical PFC: cut on the lower side of the PL10 plate.
+            // Lower member: cut on the lower side of the PL10 plate.
             CreateParallelFitting(
-                verticalPfc,
+                lowerPart,
                 lowerCutOrigin,
                 acrossStair,
                 plateDirection,
@@ -1071,7 +1140,7 @@ namespace BeacomStair
                 };
 
                 plate.Profile.ProfileString =
-                    StairSettings.BottomJoiningPlateProfile;
+                    StairSettings.JoiningPlateProfile;
 
                 plate.Material.MaterialString =
                     StairSettings.Material;
@@ -1083,8 +1152,8 @@ namespace BeacomStair
                 InsertOrThrow(
                     plate,
                     name + " [" +
-                    StairSettings.BottomJoiningPlateProfile +
-                    ", two-point plate, Rotation TOP, centred inside PFC footprint]");
+                    StairSettings.JoiningPlateProfile +
+                    ", two-point plate, Rotation TOP, outside edge flush with PFC]");
 
                 return plate;
             }
