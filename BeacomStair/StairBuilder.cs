@@ -46,12 +46,14 @@ namespace BeacomStair
         // Top and bottom connections.
         public const double WallPlateWidth = 180.0;
         public const double WallPlateHeight = 220.0;
-        public const double BasePlateLength = 300.0;
+        public const double BasePlateLength = 320.0;
         public const double BasePlateWidth = 180.0;
         public const double BasePlateThickness = 10.0;
         public const double StringerJointPlateThickness = 10.0;
         public const double TopJointPlateLength = 180.0;
         public const double TopJointPlateDepth = 160.0;
+        public const double BottomJoiningPlateLength = 250.0;
+        public const double BottomJoiningPlateWidth = 75.0;
         public static double BottomStringerJointHeight
         {
             get
@@ -64,7 +66,7 @@ namespace BeacomStair
         }
         public const double AnchorBoltSize = 16.0;
         public const double WallAnchorBoltSpacing = 100.0;
-        public const double BaseAnchorBoltSpacing = 220.0;
+        public const double BaseAnchorBoltSpacing = 250.0;
         public const string BoltStandard = "8.8XOX";
 
         // Welds.
@@ -282,6 +284,18 @@ namespace BeacomStair
                 basePlateTopZ,
                 StairSettings.BottomStringerJointHeight,
                 false);
+
+            CreateBottomJoiningPlate(
+                leftStringer,
+                leftBottomPost,
+                -halfStringerSpacing,
+                "L");
+
+            CreateBottomJoiningPlate(
+                rightStringer,
+                rightBottomPost,
+                halfStringerSpacing,
+                "R");
 
             CreateTopStringerJointPlate(
                 platform.LeftStringer,
@@ -556,7 +570,12 @@ namespace BeacomStair
         {
             double halfLength = StairSettings.BasePlateLength / 2.0;
             double halfWidth = StairSettings.BasePlateWidth / 2.0;
-            double x = StairSettings.OverallLength;
+            // Both vertical PFCs use Horizontal = Right in Tekla, so their
+            // 180 mm section depth sits to the foot side of the insertion line.
+            // Shift the base plate half the PFC depth so it is centred beneath
+            // the actual steel footprint rather than beneath the insertion point.
+            double x =
+                StairSettings.OverallLength + (StairSettings.StringerDepth / 2.0);
 
             double basePlateZ = StairSettings.BasePlateThickness / 2.0;
 
@@ -799,6 +818,55 @@ namespace BeacomStair
                 flightStringer,
                 plate,
                 "TOP JOINT PLATE " + side + " TO FLIGHT PFC");
+        }
+
+        private void CreateBottomJoiningPlate(
+            Beam flightStringer,
+            Beam verticalPfc,
+            double stringerY,
+            string side)
+        {
+            // Horizontal PL10 cap/joining plate at the bottom corner.
+            // It sits outside the tread clear width, directly over the short
+            // vertical PFC and under the end of the sloping PFC.
+            //
+            // Top face is at the bottom-tread walking level (211.33 mm),
+            // bottom face is at the proven upright top level (201.33 mm).
+            double plateCentreZ =
+                StairSettings.BottomStringerJointHeight +
+                (StairSettings.StringerJointPlateThickness / 2.0);
+
+            double x1 =
+                StairSettings.OverallLength - StairSettings.BottomJoiningPlateLength;
+
+            double x2 =
+                StairSettings.OverallLength;
+
+            double outward =
+                stringerY < 0.0 ? -1.0 : 1.0;
+
+            double y1 = stringerY;
+            double y2 =
+                stringerY + (outward * StairSettings.BottomJoiningPlateWidth);
+
+            ContourPlate plate = CreatePlate(
+                "BEACOM BOTTOM JOINING PLATE " + side,
+                StairSettings.EndPlateProfile,
+                LocalPoint(x1, y1, plateCentreZ),
+                LocalPoint(x2, y1, plateCentreZ),
+                LocalPoint(x2, y2, plateCentreZ),
+                LocalPoint(x1, y2, plateCentreZ),
+                "8");
+
+            CreateFilletWeld(
+                flightStringer,
+                plate,
+                "BOTTOM JOINING PLATE " + side + " TO SLOPING PFC");
+
+            CreateFilletWeld(
+                verticalPfc,
+                plate,
+                "BOTTOM JOINING PLATE " + side + " TO VERTICAL PFC");
         }
 
         private Beam CreateVerticalPfcBeam(
