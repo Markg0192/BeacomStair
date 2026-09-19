@@ -879,8 +879,8 @@ namespace BeacomStair
 
                 // Exact Tekla settings proven manually:
                 //
-                // LEFT  = Vertical DOWN, Rotation TOP,   Horizontal RIGHT
-                // RIGHT = Vertical UP,   Rotation BELOW, Horizontal RIGHT
+                // RIGHT = Vertical DOWN, Rotation TOP,   Horizontal RIGHT
+                // LEFT  = Vertical UP,   Rotation BELOW, Horizontal RIGHT
                 //
                 // For COLUMN-type members:
                 // Horizontal -> Plane
@@ -889,21 +889,21 @@ namespace BeacomStair
 
                 if (leftSide)
                 {
-                    column.Position.Depth = Position.DepthEnum.BEHIND;
-                    column.Position.Rotation = Position.RotationEnum.TOP;
+                    column.Position.Depth = Position.DepthEnum.FRONT;
+                    column.Position.Rotation = Position.RotationEnum.BELOW;
                 }
                 else
                 {
-                    column.Position.Depth = Position.DepthEnum.FRONT;
-                    column.Position.Rotation = Position.RotationEnum.BELOW;
+                    column.Position.Depth = Position.DepthEnum.BEHIND;
+                    column.Position.Rotation = Position.RotationEnum.TOP;
                 }
 
                 InsertOrThrow(
                     column,
                     name +
                     (leftSide
-                        ? " [COLUMN: Down / Top / Right]"
-                        : " [COLUMN: Up / Below / Right]"));
+                        ? " [COLUMN: Up / Below / Right]"
+                        : " [COLUMN: Down / Top / Right]"));
 
                 return column;
             }
