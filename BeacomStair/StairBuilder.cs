@@ -53,7 +53,7 @@ namespace BeacomStair
         public const double StringerJointPlateThickness = 10.0;
         public const double TopJointPlateLength = 180.0;
         public const double TopJointPlateDepth = 160.0;
-        public const double BottomJoiningPlateWidth = 55.0;
+        public const string BottomJoiningPlateProfile = "PL10*55";
         public const double BottomJoiningPlateBackFromJoint = 160.0;
         public const double BottomJoiningPlateDownFromStringerTop = 65.0;
         public const double BottomJoiningPlatePostInset = 25.0;
@@ -833,10 +833,9 @@ namespace BeacomStair
             bool leftSide,
             string side)
         {
-            // PL10 diagonal gusset in the common web plane of the sloping and
-            // vertical PFCs. One end lands on the sloping web, the other lands
-            // lower down on the vertical web, matching the intended diagonal
-            // detail at the actual member intersection.
+            // Create this as a two-point plate (Beam with a PL profile), not a
+            // ContourPlate. Only the diagonal centreline is defined here; Tekla
+            // supplies the 55 mm plate width from PL10*55.
             double plateY = leftSide
                 ? stringerY + (StairSettings.StringerJointPlateThickness / 2.0)
                 : stringerY - (StairSettings.StringerJointPlateThickness / 2.0);
@@ -856,50 +855,100 @@ namespace BeacomStair
             double postZ =
                 StairSettings.BottomJoiningPlatePostHeight;
 
-            // Build a narrow rectangular strap around the diagonal centreline.
-            double dx = postX - slopingX;
-            double dz = postZ - slopingZ;
-            double length = Math.Sqrt((dx * dx) + (dz * dz));
+            Point startPoint = LocalPoint(
+                slopingX,
+                plateY,
+                slopingZ);
 
-            if (length < 1.0)
-                throw new InvalidOperationException("Bottom joining plate geometry is invalid.");
+            Point endPoint = LocalPoint(
+                postX,
+                plateY,
+                postZ);
 
-            double halfWidth = StairSettings.BottomJoiningPlateWidth / 2.0;
-
-            // Perpendicular to the diagonal in the local X-Z plane.
-            double offsetX = (-dz / length) * halfWidth;
-            double offsetZ = (dx / length) * halfWidth;
-
-            ContourPlate plate = CreatePlate(
+            Beam joiningPlate = CreateTwoPointWebPlate(
                 "BEACOM BOTTOM JOINING PLATE " + side,
-                StairSettings.EndPlateProfile,
-                LocalPoint(
-                    slopingX + offsetX,
-                    plateY,
-                    slopingZ + offsetZ),
-                LocalPoint(
-                    postX + offsetX,
-                    plateY,
-                    postZ + offsetZ),
-                LocalPoint(
-                    postX - offsetX,
-                    plateY,
-                    postZ - offsetZ),
-                LocalPoint(
-                    slopingX - offsetX,
-                    plateY,
-                    slopingZ - offsetZ),
-                "8");
+                startPoint,
+                endPoint);
 
             CreateFilletWeld(
                 flightStringer,
-                plate,
-                "BOTTOM DIAGONAL JOINING PLATE " + side + " TO SLOPING PFC");
+                joiningPlate,
+                "BOTTOM TWO-POINT JOINING PLATE " + side + " TO SLOPING PFC");
 
             CreateFilletWeld(
                 verticalPfc,
-                plate,
-                "BOTTOM DIAGONAL JOINING PLATE " + side + " TO VERTICAL PFC");
+                joiningPlate,
+                "BOTTOM TWO-POINT JOINING PLATE " + side + " TO VERTICAL PFC");
+        }
+
+        private Beam CreateTwoPointWebPlate(
+            string name,
+            Point startPoint,
+            Point endPoint)
+        {
+            WorkPlaneHandler workPlaneHandler = _model.GetWorkPlaneHandler();
+            TransformationPlane originalPlane =
+                workPlaneHandler.GetCurrentTransformationPlane();
+
+            try
+            {
+                Point globalStart =
+                    originalPlane.TransformationMatrixToGlobal.Transform(startPoint);
+
+                Point globalEnd =
+                    originalPlane.TransformationMatrixToGlobal.Transform(endPoint);
+
+                Vector globalXAxis =
+                    ToGlobalVector(_xAxis, originalPlane);
+
+                Vector globalZAxis =
+                    ToGlobalVector(new V3(0.0, 0.0, 1.0), originalPlane);
+
+                // Vertical stair-side plane (run x vertical). Creating the plate in
+                // this work plane makes Rotation FRONT put the broad plate face in
+                // the PFC web plane.
+                TransformationPlane webPlane =
+                    new TransformationPlane(
+                        globalStart,
+                        globalXAxis,
+                        globalZAxis);
+
+                workPlaneHandler.SetCurrentTransformationPlane(webPlane);
+
+                Point localStart =
+                    webPlane.TransformationMatrixToLocal.Transform(globalStart);
+
+                Point localEnd =
+                    webPlane.TransformationMatrixToLocal.Transform(globalEnd);
+
+                Beam plate = new Beam(localStart, localEnd)
+                {
+                    Name = name,
+                    Class = "8"
+                };
+
+                plate.Profile.ProfileString =
+                    StairSettings.BottomJoiningPlateProfile;
+
+                plate.Material.MaterialString =
+                    StairSettings.Material;
+
+                plate.Position.Plane = Position.PlaneEnum.MIDDLE;
+                plate.Position.Depth = Position.DepthEnum.MIDDLE;
+                plate.Position.Rotation = Position.RotationEnum.FRONT;
+
+                InsertOrThrow(
+                    plate,
+                    name + " [" +
+                    StairSettings.BottomJoiningPlateProfile +
+                    ", two-point plate, Rotation FRONT]");
+
+                return plate;
+            }
+            finally
+            {
+                workPlaneHandler.SetCurrentTransformationPlane(originalPlane);
+            }
         }
 
         private Beam CreateVerticalPfcBeam(
