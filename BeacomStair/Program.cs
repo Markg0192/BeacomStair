@@ -28,10 +28,10 @@ namespace BeacomStair
                 Picker picker = new Picker();
 
                 Point startPoint = picker.PickPoint(
-                    "BeacomStair: pick the CENTRE of the stair FOOT at ground level.");
+                    "BeacomStair: pick the GROUND point at the WALL, below the top landing.");
 
                 Point directionPoint = picker.PickPoint(
-                    "BeacomStair: pick the END direction toward the top of the stair.");
+                    "BeacomStair: pick outward from the wall in the direction of the stair FOOT.");
 
                 StairBuilder builder = new StairBuilder(model);
                 StairBuildResult result = builder.Build(startPoint, directionPoint);
