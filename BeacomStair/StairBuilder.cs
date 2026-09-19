@@ -40,7 +40,8 @@ namespace BeacomStair
         public const double TreadFirstBoltFromLeadingEdge = 30.0;
         public const double TreadBoltDownFromTop = 58.0;
         public const double KickerUpstand = 50.0;
-        public const double KickerDownstand = 10.0;
+        public const double KickerBelowTread = 10.0;
+        public const double KickerThickness = 6.0;
 
         // Top and bottom connections.
         public const double WallPlateWidth = 180.0;
@@ -435,25 +436,35 @@ namespace BeacomStair
 
             for (int i = 0; i < StairSettings.TreadCount; i++)
             {
-                double backX =
+                double treadBackEdgeX =
                     StairSettings.PlatformLength + (i * StairSettings.Going);
+
+                // PL6 contour plates are centred on their contour plane.
+                // Move the plane half the plate thickness outside the tread edge
+                // so the kicker face is flush with the tread edge rather than
+                // overlapping the PL10 tread.
+                double kickerX =
+                    treadBackEdgeX - (StairSettings.KickerThickness / 2.0);
 
                 double treadTopZ =
                     StairSettings.TotalRise - ((i + 1) * StairSettings.Rise);
+
+                double treadBottomZ =
+                    treadTopZ - StairSettings.TreadPlateThickness;
 
                 double kickerTopZ =
                     treadTopZ + StairSettings.KickerUpstand;
 
                 double kickerBottomZ =
-                    treadTopZ - StairSettings.KickerDownstand;
+                    treadBottomZ - StairSettings.KickerBelowTread;
 
                 ContourPlate kicker = CreatePlate(
                     "BEACOM TREAD KICKER " + (i + 1),
                     StairSettings.KickerProfile,
-                    LocalPoint(backX, -halfWidth, kickerTopZ),
-                    LocalPoint(backX, halfWidth, kickerTopZ),
-                    LocalPoint(backX, halfWidth, kickerBottomZ),
-                    LocalPoint(backX, -halfWidth, kickerBottomZ),
+                    LocalPoint(kickerX, -halfWidth, kickerTopZ),
+                    LocalPoint(kickerX, halfWidth, kickerTopZ),
+                    LocalPoint(kickerX, halfWidth, kickerBottomZ),
+                    LocalPoint(kickerX, -halfWidth, kickerBottomZ),
                     "5");
 
                 CreateFilletWeld(
