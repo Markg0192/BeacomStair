@@ -107,3 +107,8 @@ The separate bottom stringer splice plate has been removed. On the bottom tread 
 The bottom tread split-bolt arrangement remains unchanged. A separate horizontal PL10 joining plate is now provided at each bottom corner, outside the 900 mm clear tread width, tying the sloping PFC to the short vertical PFC. The plate is 250 mm long by 75 mm wide.
 
 The base plate is now 320 × 180 × 10 and is shifted half the PFC depth toward the actual upright footprint so the plate is centred beneath the column rather than beneath its insertion line. The two M16 site anchors are at 250 mm centres to keep them clear of the PFC.
+
+
+## Bottom joint alignment refinement
+
+The horizontal PL10 joining plate now matches the top footprint of the PFC: 180 × 75 × 10, running from one full PFC depth behind the joint to the sloping-stringer / vertical-upright insertion-line intersection. The base plate remains 320 × 180 × 10 but its centre is shifted 90 mm in the opposite direction so it sits under the actual vertical PFC footprint rather than away from it.
