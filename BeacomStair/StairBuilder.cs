@@ -52,8 +52,6 @@ namespace BeacomStair
         public const double StringerJointPlateThickness = 10.0;
         public const double TopJointPlateLength = 180.0;
         public const double TopJointPlateDepth = 160.0;
-        public const double BottomJointPlateLength = 120.0;
-        public const double BottomJointPlateDepth = 120.0;
         public static double BottomStringerJointHeight
         {
             get
@@ -299,20 +297,6 @@ namespace BeacomStair
                 false,
                 "R");
 
-            CreateBottomStringerJointPlate(
-                leftStringer,
-                leftBottomPost,
-                -halfStringerSpacing,
-                true,
-                "L");
-
-            CreateBottomStringerJointPlate(
-                rightStringer,
-                rightBottomPost,
-                halfStringerSpacing,
-                false,
-                "R");
-
             FlightParts result = new FlightParts
             {
                 LeftStringer = leftStringer,
@@ -342,9 +326,12 @@ namespace BeacomStair
 
                 result.Treads.Add(tread);
 
+                bool isBottomTread = i == StairSettings.TreadCount - 1;
+
                 CreateTreadSidePlateAndBolts(
                     tread,
                     leftStringer,
+                    isBottomTread ? leftBottomPost : null,
                     x1,
                     treadTopZ,
                     -halfStringerSpacing,
@@ -354,6 +341,7 @@ namespace BeacomStair
                 CreateTreadSidePlateAndBolts(
                     tread,
                     rightStringer,
+                    isBottomTread ? rightBottomPost : null,
                     x1,
                     treadTopZ,
                     halfStringerSpacing,
@@ -369,15 +357,26 @@ namespace BeacomStair
         private void CreateTreadSidePlateAndBolts(
             ContourPlate tread,
             Beam stringer,
+            Beam bottomVerticalPfc,
             double treadStartX,
             double treadTopZ,
             double stringerY,
             bool leftSide,
             int treadNumber)
         {
-            // Full-depth tread end plate:
-            // PL10 horizontal tread above a shallow PL8 vertical end plate.
-            // The end plate follows the full 250 mm going and bolts to the PFC web.
+            bool isBottomTread = bottomVerticalPfc != null;
+
+            // Normal treads use PL8 end plates.
+            // The bottom tread uses PL10 because this plate also forms the clean
+            // connection between the sloping PFC and the short vertical PFC.
+            string sidePlateProfile = isBottomTread
+                ? StairSettings.EndPlateProfile
+                : StairSettings.TreadSidePlateProfile;
+
+            double sidePlateThickness = isBottomTread
+                ? StairSettings.StringerJointPlateThickness
+                : StairSettings.TreadSidePlateThickness;
+
             double sidePlateX1 = treadStartX;
             double sidePlateX2 = treadStartX + StairSettings.Going;
 
@@ -388,12 +387,12 @@ namespace BeacomStair
                 sidePlateTopZ - StairSettings.TreadSidePlateHeight;
 
             double sidePlateY = leftSide
-                ? stringerY + (StairSettings.TreadSidePlateThickness / 2.0)
-                : stringerY - (StairSettings.TreadSidePlateThickness / 2.0);
+                ? stringerY + (sidePlateThickness / 2.0)
+                : stringerY - (sidePlateThickness / 2.0);
 
             ContourPlate sidePlate = CreatePlate(
                 "BEACOM TREAD END PLATE " + treadNumber + (leftSide ? " L" : " R"),
-                StairSettings.TreadSidePlateProfile,
+                sidePlateProfile,
                 LocalPoint(sidePlateX1, sidePlateY, sidePlateTopZ),
                 LocalPoint(sidePlateX2, sidePlateY, sidePlateTopZ),
                 LocalPoint(sidePlateX2, sidePlateY, sidePlateBottomZ),
@@ -407,28 +406,62 @@ namespace BeacomStair
                 (leftSide ? " LEFT" : " RIGHT") +
                 " END PLATE TO TREAD");
 
-            // Leading edge is the downhill/front edge of the tread (x2).
-            // Keep the familiar plate-tread arrangement:
-            // first bolt 30 mm back from the leading edge, second 125 mm behind it.
-            double firstBoltX =
+            double frontBoltX =
                 sidePlateX2 - StairSettings.TreadFirstBoltFromLeadingEdge;
 
-            double secondBoltX =
-                firstBoltX - StairSettings.TreadBoltSpacing;
+            double rearBoltX =
+                frontBoltX - StairSettings.TreadBoltSpacing;
 
             double boltZ =
                 treadTopZ - StairSettings.TreadBoltDownFromTop;
 
-            CreateTwoBoltArray(
+            Point frontBolt =
+                LocalPoint(frontBoltX, sidePlateY, boltZ);
+
+            Point rearBolt =
+                LocalPoint(rearBoltX, sidePlateY, boltZ);
+
+            if (!isBottomTread)
+            {
+                CreateTwoBoltArray(
+                    sidePlate,
+                    stringer,
+                    frontBolt,
+                    rearBolt,
+                    StairSettings.TreadBoltSize,
+                    BoltPlaneKind.StairSide,
+                    "TREAD " + treadNumber +
+                    (leftSide ? " LEFT" : " RIGHT") +
+                    " END PLATE - 2 M12 BOLTS TO PFC");
+
+                return;
+            }
+
+            // Bottom tread only:
+            // the front bolt passes through the short vertical PFC,
+            // while the rear bolt passes through the sloping PFC.
+            // They must therefore be separate Tekla bolt groups.
+            CreateSingleBolt(
                 sidePlate,
-                stringer,
-                LocalPoint(firstBoltX, sidePlateY, boltZ),
-                LocalPoint(secondBoltX, sidePlateY, boltZ),
+                bottomVerticalPfc,
+                frontBolt,
+                rearBolt,
                 StairSettings.TreadBoltSize,
                 BoltPlaneKind.StairSide,
-                "TREAD " + treadNumber +
-                (leftSide ? " LEFT" : " RIGHT") +
-                " END PLATE - 2 M12 BOLTS TO PFC");
+                "BOTTOM TREAD " +
+                (leftSide ? "LEFT" : "RIGHT") +
+                " FRONT M12 TO VERTICAL PFC");
+
+            CreateSingleBolt(
+                sidePlate,
+                stringer,
+                rearBolt,
+                frontBolt,
+                StairSettings.TreadBoltSize,
+                BoltPlaneKind.StairSide,
+                "BOTTOM TREAD " +
+                (leftSide ? "LEFT" : "RIGHT") +
+                " REAR M12 TO SLOPING PFC");
         }
 
         private void CreateKickers(FlightParts flight)
@@ -768,55 +801,6 @@ namespace BeacomStair
                 "TOP JOINT PLATE " + side + " TO FLIGHT PFC");
         }
 
-        private void CreateBottomStringerJointPlate(
-            Beam flightStringer,
-            Beam verticalPfc,
-            double stringerY,
-            bool leftSide,
-            string side)
-        {
-            // Small PL10 plate on the inside web face only. It bridges the last
-            // piece of the sloping PFC to the short vertical PFC without covering
-            // most of the bottom connection.
-            double plateY = leftSide
-                ? stringerY + (StairSettings.StringerJointPlateThickness / 2.0)
-                : stringerY - (StairSettings.StringerJointPlateThickness / 2.0);
-
-            double jointX = StairSettings.OverallLength;
-            double jointZ = StairSettings.BottomStringerJointHeight;
-
-            double xLeft =
-                jointX - StairSettings.BottomJointPlateLength;
-
-            double xLowerLeft =
-                jointX - (StairSettings.BottomJointPlateLength * 0.40);
-
-            double topZ =
-                jointZ + (StairSettings.BottomJointPlateDepth * 0.35);
-
-            double bottomZ =
-                jointZ - (StairSettings.BottomJointPlateDepth * 0.65);
-
-            ContourPlate plate = CreatePlate(
-                "BEACOM BOTTOM STRINGER JOINT PLATE " + side,
-                StairSettings.EndPlateProfile,
-                LocalPoint(xLeft, plateY, topZ),
-                LocalPoint(jointX, plateY, topZ),
-                LocalPoint(jointX, plateY, bottomZ),
-                LocalPoint(xLowerLeft, plateY, bottomZ),
-                "8");
-
-            CreateFilletWeld(
-                flightStringer,
-                plate,
-                "BOTTOM JOINT PLATE " + side + " TO FLIGHT PFC");
-
-            CreateFilletWeld(
-                verticalPfc,
-                plate,
-                "BOTTOM JOINT PLATE " + side + " TO VERTICAL PFC");
-        }
-
         private Beam CreateVerticalPfcBeam(
             string name,
             double x,
@@ -1118,6 +1102,104 @@ namespace BeacomStair
                     bolts,
                     description + " [SITE M" + boltSize.ToString("0") +
                     ", cut: 200, extra: 0, one nut-side washer + nut]");
+            }
+            finally
+            {
+                workPlaneHandler.SetCurrentTransformationPlane(originalPlane);
+            }
+        }
+
+        private void CreateSingleBolt(
+            Part partToBeBolted,
+            Part partToBoltTo,
+            Point boltPosition,
+            Point orientationPosition,
+            double boltSize,
+            BoltPlaneKind boltPlaneKind,
+            string description)
+        {
+            WorkPlaneHandler workPlaneHandler = _model.GetWorkPlaneHandler();
+            TransformationPlane originalPlane =
+                workPlaneHandler.GetCurrentTransformationPlane();
+
+            try
+            {
+                Point globalBolt =
+                    originalPlane.TransformationMatrixToGlobal.Transform(boltPosition);
+
+                Point globalOrientation =
+                    originalPlane.TransformationMatrixToGlobal.Transform(orientationPosition);
+
+                Vector globalXAxis = ToGlobalVector(_xAxis, originalPlane);
+                Vector globalYAxis = ToGlobalVector(_yAxis, originalPlane);
+                Vector globalZAxis = ToGlobalVector(new V3(0.0, 0.0, 1.0), originalPlane);
+
+                Vector planeAxisX;
+                Vector planeAxisY;
+
+                switch (boltPlaneKind)
+                {
+                    case BoltPlaneKind.StairSide:
+                        planeAxisX = globalXAxis;
+                        planeAxisY = globalZAxis;
+                        break;
+
+                    case BoltPlaneKind.Wall:
+                        planeAxisX = globalYAxis;
+                        planeAxisY = globalZAxis;
+                        break;
+
+                    default:
+                        planeAxisX = globalXAxis;
+                        planeAxisY = globalYAxis;
+                        break;
+                }
+
+                TransformationPlane boltPlane =
+                    new TransformationPlane(globalBolt, planeAxisX, planeAxisY);
+
+                workPlaneHandler.SetCurrentTransformationPlane(boltPlane);
+
+                Point localBolt =
+                    boltPlane.TransformationMatrixToLocal.Transform(globalBolt);
+
+                Point localOrientation =
+                    boltPlane.TransformationMatrixToLocal.Transform(globalOrientation);
+
+                BoltArray bolt = new BoltArray
+                {
+                    PartToBeBolted = partToBeBolted,
+                    PartToBoltTo = partToBoltTo,
+                    FirstPosition = localBolt,
+                    SecondPosition = localOrientation,
+                    BoltSize = boltSize,
+                    Tolerance = 2.0,
+                    BoltStandard = StairSettings.BoltStandard,
+                    BoltType = BoltGroup.BoltTypeEnum.BOLT_TYPE_SITE,
+                    CutLength = 200.0,
+                    ExtraLength = 0.0,
+                    ThreadInMaterial = BoltGroup.BoltThreadInMaterialEnum.THREAD_IN_MATERIAL_YES,
+                    Bolt = true,
+                    Washer1 = false,
+                    Washer2 = true,
+                    Washer3 = false,
+                    Nut1 = true,
+                    Nut2 = false
+                };
+
+                bolt.Position.Depth = Position.DepthEnum.MIDDLE;
+                bolt.Position.Plane = Position.PlaneEnum.MIDDLE;
+                bolt.Position.Rotation = Position.RotationEnum.FRONT;
+
+                // A zero distance in each direction creates one bolt at the
+                // FirstPosition while SecondPosition only defines the array axis.
+                bolt.AddBoltDistX(0.0);
+                bolt.AddBoltDistY(0.0);
+
+                InsertOrThrow(
+                    bolt,
+                    description + " [single SITE M" + boltSize.ToString("0") +
+                    ", cut: 200, extra: 0, thread in material]");
             }
             finally
             {
