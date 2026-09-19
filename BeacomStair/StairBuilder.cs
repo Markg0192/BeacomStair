@@ -888,15 +888,18 @@ namespace BeacomStair
                 // For COLUMN-type members:
                 // Horizontal -> Plane
                 // Vertical   -> Depth (Behind = Down, Front = Up)
-                column.Position.Plane = Position.PlaneEnum.RIGHT;
-
                 if (leftSide)
                 {
+                    column.Position.Plane = Position.PlaneEnum.RIGHT;
                     column.Position.Depth = Position.DepthEnum.BEHIND;
                     column.Position.Rotation = Position.RotationEnum.TOP;
                 }
                 else
                 {
+                    // For the Up / Below upright Tekla resolves the local plane
+                    // opposite to the property-pane label. LEFT here produces
+                    // Horizontal = Right in the model.
+                    column.Position.Plane = Position.PlaneEnum.LEFT;
                     column.Position.Depth = Position.DepthEnum.FRONT;
                     column.Position.Rotation = Position.RotationEnum.BELOW;
                 }
@@ -906,7 +909,7 @@ namespace BeacomStair
                     name +
                     (leftSide
                         ? " [COLUMN: Down / Top / Right]"
-                        : " [COLUMN: Up / Below / Right]"));
+                        : " [COLUMN: Up / Below / Right (Plane LEFT in API)]"));
 
                 return column;
             }
