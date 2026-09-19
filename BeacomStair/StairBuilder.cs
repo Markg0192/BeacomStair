@@ -210,14 +210,14 @@ namespace BeacomStair
             Beam leftStringer = CreatePfcBeam(
                 "BEACOM FLIGHT STRINGER L",
                 LocalPoint(StairSettings.PlatformLength, -halfStringerSpacing, StairSettings.TotalRise),
-                LocalPoint(StairSettings.OverallLength, -halfStringerSpacing, rise),
+                LocalPoint(StairSettings.OverallLength, -halfStringerSpacing, StairSettings.StringerDepth),
                 "2",
                 true);
 
             Beam rightStringer = CreatePfcBeam(
                 "BEACOM FLIGHT STRINGER R",
                 LocalPoint(StairSettings.PlatformLength, halfStringerSpacing, StairSettings.TotalRise),
-                LocalPoint(StairSettings.OverallLength, halfStringerSpacing, rise),
+                LocalPoint(StairSettings.OverallLength, halfStringerSpacing, StairSettings.StringerDepth),
                 "2",
                 false);
 
@@ -448,20 +448,20 @@ namespace BeacomStair
             CreateSideGuard(
                 -railOffset,
                 "L",
-                platform.LeftStringer,
+                platform.Deck,
                 flight.LeftStringer);
 
             CreateSideGuard(
                 railOffset,
                 "R",
-                platform.RightStringer,
+                platform.Deck,
                 flight.RightStringer);
         }
 
         private void CreateSideGuard(
             double y,
             string side,
-            Beam platformStringer,
+            ContourPlate platformDeck,
             Beam flightStringer)
         {
             double platformZ = StairSettings.TotalRise;
@@ -489,7 +489,7 @@ namespace BeacomStair
 
             foreach (Beam post in platformPosts)
             {
-                CreateFilletWeld(platformStringer, post, "PLATFORM POST " + side + " TO PFC");
+                CreateFilletWeld(platformDeck, post, "PLATFORM POST " + side + " TO DECK");
                 CreateFilletWeld(post, platformTopRail, "PLATFORM POST " + side + " TO TOP RAIL");
                 CreateFilletWeld(post, platformMidRail, "PLATFORM POST " + side + " TO MID RAIL");
             }
@@ -524,13 +524,14 @@ namespace BeacomStair
                  x <= StairSettings.OverallLength + 0.1;
                  x += 500.0)
             {
-                double baseZ = FlightPitchZ(x);
+                double baseZ = FlightStringerTopZ(x);
+                double topZ = FlightPitchZ(x) + StairSettings.StairHandrailHeight;
 
                 Beam post = CreateRailPost(
                     x,
                     y,
                     baseZ,
-                    baseZ + StairSettings.StairHandrailHeight,
+                    topZ,
                     side,
                     "STAIR");
 
@@ -579,6 +580,15 @@ namespace BeacomStair
 
             return StairSettings.TotalRise -
                    (ratio * (StairSettings.TotalRise - StairSettings.Rise));
+        }
+
+        private double FlightStringerTopZ(double x)
+        {
+            double distance = x - StairSettings.PlatformLength;
+            double ratio = distance / StairSettings.FlightRun;
+
+            return StairSettings.TotalRise -
+                   (ratio * (StairSettings.TotalRise - StairSettings.StringerDepth));
         }
 
         private Point LocalPoint(double x, double y, double z)
