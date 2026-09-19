@@ -825,36 +825,77 @@ namespace BeacomStair
             double topZ,
             bool leftSide)
         {
-            // Model vertical members bottom-to-top. Tekla's vertical-member
-            // orientation is much more predictable this way than reversing the
-            // start/end points.
-            Beam beam = new Beam(
-                LocalPoint(x, y, bottomZ),
-                LocalPoint(x, y, topZ))
+            WorkPlaneHandler workPlaneHandler = _model.GetWorkPlaneHandler();
+            TransformationPlane originalPlane =
+                workPlaneHandler.GetCurrentTransformationPlane();
+
+            try
             {
-                Name = name,
-                Class = "2"
-            };
+                // A vertical beam has no horizontal component from which Tekla can
+                // infer the stair direction. Build it in a temporary work plane
+                // explicitly aligned with the stair X/Y axes so its rotation is
+                // independent of whatever work plane the user currently has active.
+                Point globalOrigin =
+                    originalPlane.TransformationMatrixToGlobal.Transform(
+                        _origin.ToPoint());
 
-            beam.Profile.ProfileString = StairSettings.StringerProfile;
-            beam.Material.MaterialString = StairSettings.Material;
+                Vector globalXAxis =
+                    ToGlobalVector(_xAxis, originalPlane);
 
-            // FRONT/BACK mirrors the two channels while keeping the flat web faces
-            // toward the stair and the open channel/toes outward. TOP is correct
-            // for the sloping beams but rolls a vertical PFC around its axis.
-            beam.Position.Plane = Position.PlaneEnum.RIGHT;
-            beam.Position.Depth = Position.DepthEnum.MIDDLE;
-            beam.Position.Rotation = leftSide
-                ? Position.RotationEnum.FRONT
-                : Position.RotationEnum.BACK;
+                Vector globalYAxis =
+                    ToGlobalVector(_yAxis, originalPlane);
 
-            InsertOrThrow(
-                beam,
-                name + " [vertical " + StairSettings.StringerProfile +
-                ", plane: RIGHT, rotation: " +
-                (leftSide ? "FRONT" : "BACK") + "]");
+                TransformationPlane stairPlane =
+                    new TransformationPlane(
+                        globalOrigin,
+                        globalXAxis,
+                        globalYAxis);
 
-            return beam;
+                Point globalBottom =
+                    originalPlane.TransformationMatrixToGlobal.Transform(
+                        LocalPoint(x, y, bottomZ));
+
+                Point globalTop =
+                    originalPlane.TransformationMatrixToGlobal.Transform(
+                        LocalPoint(x, y, topZ));
+
+                workPlaneHandler.SetCurrentTransformationPlane(stairPlane);
+
+                Point localBottom =
+                    stairPlane.TransformationMatrixToLocal.Transform(globalBottom);
+
+                Point localTop =
+                    stairPlane.TransformationMatrixToLocal.Transform(globalTop);
+
+                Beam beam = new Beam(localBottom, localTop)
+                {
+                    Name = name,
+                    Class = "2"
+                };
+
+                beam.Profile.ProfileString = StairSettings.StringerProfile;
+                beam.Material.MaterialString = StairSettings.Material;
+
+                // With the work plane locked to the stair, FRONT/BACK now genuinely
+                // mirror the two channels across the stair centreline.
+                beam.Position.Plane = Position.PlaneEnum.RIGHT;
+                beam.Position.Depth = Position.DepthEnum.MIDDLE;
+                beam.Position.Rotation = leftSide
+                    ? Position.RotationEnum.FRONT
+                    : Position.RotationEnum.BACK;
+
+                InsertOrThrow(
+                    beam,
+                    name + " [vertical " + StairSettings.StringerProfile +
+                    ", stair-aligned work plane, rotation: " +
+                    (leftSide ? "FRONT" : "BACK") + "]");
+
+                return beam;
+            }
+            finally
+            {
+                workPlaneHandler.SetCurrentTransformationPlane(originalPlane);
+            }
         }
 
         private Beam CreatePfcBeam(
