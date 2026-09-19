@@ -25,7 +25,7 @@ namespace BeacomStair
         public const double StringerDepth = 180.0;
         public const string StringerProfile = "PFC-180*75*20";
         public const string TreadProfile = "PL10";
-        public const string RiserProfile = "PL6";
+        public const string KickerProfile = "PL6";
         public const string TreadSidePlateProfile = "PL8";
         public const string EndPlateProfile = "PL10";
         public const string Material = "S355JR";
@@ -39,6 +39,7 @@ namespace BeacomStair
         public const double TreadBoltSpacing = 125.0;
         public const double TreadFirstBoltFromLeadingEdge = 30.0;
         public const double TreadBoltDownFromTop = 58.0;
+        public const double KickerDepth = 50.0;
 
         // Top and bottom connections.
         public const double WallPlateWidth = 180.0;
@@ -357,7 +358,7 @@ namespace BeacomStair
                     i + 1);
             }
 
-            CreateRisers(platform, result);
+            CreateKickers(result);
 
             return result;
         }
@@ -421,51 +422,43 @@ namespace BeacomStair
                 LocalPoint(firstBoltX, sidePlateY, boltZ),
                 LocalPoint(secondBoltX, sidePlateY, boltZ),
                 StairSettings.TreadBoltSize,
-                false,
                 BoltPlaneKind.StairSide,
                 "TREAD " + treadNumber +
                 (leftSide ? " LEFT" : " RIGHT") +
                 " END PLATE - 2 M12 BOLTS TO PFC");
         }
 
-        private void CreateRisers(PlatformParts platform, FlightParts flight)
+        private void CreateKickers(FlightParts flight)
         {
-            double rise = StairSettings.Rise;
             double halfWidth = StairSettings.TreadWidth / 2.0;
 
-            for (int i = 0; i < StairSettings.RiseCount; i++)
+            for (int i = 0; i < StairSettings.TreadCount; i++)
             {
-                double x = StairSettings.PlatformLength + (i * StairSettings.Going);
-                double zTop = StairSettings.TotalRise - (i * rise);
-                double zBottom = StairSettings.TotalRise - ((i + 1) * rise);
+                double backX =
+                    StairSettings.PlatformLength + (i * StairSettings.Going);
 
-                if (i == StairSettings.RiseCount - 1)
-                    x = StairSettings.OverallLength;
+                double treadTopZ =
+                    StairSettings.TotalRise - ((i + 1) * StairSettings.Rise);
 
-                ContourPlate riser = CreatePlate(
-                    "BEACOM RISER " + (i + 1),
-                    StairSettings.RiserProfile,
-                    LocalPoint(x, -halfWidth, zTop),
-                    LocalPoint(x, halfWidth, zTop),
-                    LocalPoint(x, halfWidth, zBottom),
-                    LocalPoint(x, -halfWidth, zBottom),
+                double kickerTopZ =
+                    treadTopZ - StairSettings.TreadPlateThickness;
+
+                double kickerBottomZ =
+                    kickerTopZ - StairSettings.KickerDepth;
+
+                ContourPlate kicker = CreatePlate(
+                    "BEACOM TREAD KICKER " + (i + 1),
+                    StairSettings.KickerProfile,
+                    LocalPoint(backX, -halfWidth, kickerTopZ),
+                    LocalPoint(backX, halfWidth, kickerTopZ),
+                    LocalPoint(backX, halfWidth, kickerBottomZ),
+                    LocalPoint(backX, -halfWidth, kickerBottomZ),
                     "5");
 
-                // Upper walking surface.
-                Part upperPart = i == 0
-                    ? (Part)platform.Deck
-                    : flight.Treads[i - 1];
-
-                CreateFilletWeld(upperPart, riser, "RISER " + (i + 1) + " TO UPPER PLATE");
-
-                // Lower walking surface, except for the final riser down to ground.
-                if (i < StairSettings.TreadCount)
-                {
-                    CreateFilletWeld(
-                        flight.Treads[i],
-                        riser,
-                        "RISER " + (i + 1) + " TO LOWER TREAD");
-                }
+                CreateFilletWeld(
+                    flight.Treads[i],
+                    kicker,
+                    "TREAD " + (i + 1) + " TO 50MM KICKER");
             }
         }
 
@@ -509,7 +502,6 @@ namespace BeacomStair
                 lowerBolt,
                 upperBolt,
                 StairSettings.AnchorBoltSize,
-                true,
                 BoltPlaneKind.Wall,
                 "WALL END PLATE " + side + " - 2 M16 ANCHORS");
         }
@@ -549,7 +541,6 @@ namespace BeacomStair
                 firstBolt,
                 secondBolt,
                 StairSettings.AnchorBoltSize,
-                true,
                 BoltPlaneKind.Horizontal,
                 "BASE PLATE " + side + " - 2 M16 ANCHORS");
         }
@@ -947,7 +938,6 @@ namespace BeacomStair
             Point firstPosition,
             Point secondPosition,
             double boltSize,
-            bool siteBolt,
             BoltPlaneKind boltPlaneKind,
             string description)
         {
@@ -1014,15 +1004,16 @@ namespace BeacomStair
                     BoltSize = boltSize,
                     Tolerance = 2.0,
                     BoltStandard = StairSettings.BoltStandard,
-                    BoltType = siteBolt
-                        ? BoltGroup.BoltTypeEnum.BOLT_TYPE_SITE
-                        : BoltGroup.BoltTypeEnum.BOLT_TYPE_WORKSHOP,
-                    CutLength = 100.0,
-                    ExtraLength = 10.0,
+                    BoltType = BoltGroup.BoltTypeEnum.BOLT_TYPE_SITE,
+                    CutLength = 200.0,
+                    ExtraLength = 0.0,
                     ThreadInMaterial = BoltGroup.BoltThreadInMaterialEnum.THREAD_IN_MATERIAL_NO,
                     Bolt = true,
-                    Washer1 = true,
-                    Washer2 = false,
+
+                    // Bolt head side: bolt only.
+                    // Nut side: one washer and one nut.
+                    Washer1 = false,
+                    Washer2 = true,
                     Washer3 = false,
                     Nut1 = true,
                     Nut2 = false
@@ -1037,8 +1028,8 @@ namespace BeacomStair
 
                 InsertOrThrow(
                     bolts,
-                    description + " [bolt: M" + boltSize.ToString("0") +
-                    ", standard: " + StairSettings.BoltStandard + "]");
+                    description + " [SITE M" + boltSize.ToString("0") +
+                    ", cut: 200, extra: 0, one nut-side washer + nut]");
             }
             finally
             {
