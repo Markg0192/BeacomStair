@@ -81,3 +81,8 @@ The quoted stair levels are finished walking-surface levels. The top face of the
 ## Bolt assembly convention
 
 All generated bolts are SITE bolts. Bolt cut length is 200 mm and extra length is 0 mm. Thread in material is set to YES. The assembly is bolt head only on the head side, with one washer and one nut on the nut side.
+
+
+## Refined bottom connection
+
+The short bottom PFC is modelled bottom-to-top and uses FRONT/BACK rotation rather than TOP so the left and right channels mirror correctly as vertical members. The PL10 splice at the sloping-to-vertical PFC joint is a compact corner plate on the inside web face. The base plate is 300 × 180 × 10 with the two M16 site anchors at 220 mm centres so they sit outside the PFC footprint rather than clashing with it.
