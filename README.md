@@ -41,10 +41,10 @@ If your Tekla installation is somewhere else, change `TeklaInstallDir` in `Beaco
 
 The stair geometry above is fixed. The section/plate defaults below are deliberately kept in one settings class so they are easy to change after the first live model test:
 
-- Stringers/platform side beams: `PFC-150*75*18`
+- Stringers/platform side beams: `PFC-180*75*20`
 - Treads/platform deck: `PL10`
-- Tread side plates: `PL8`, 150 × 80 mm, vertical at each side of every tread
-- Tread fixing: 2 × M12 bolts at 75 mm centres through each side plate into the PFC web
+- Tread end plates: `PL8`, full 250 mm tread depth × 70 mm deep
+- Tread fixing: 2 × M12 bolts per end plate; first bolt 30 mm from leading edge, 125 mm centres
 - Risers: `PL6`
 - Platform/flight joint: 10 mm web plate at each PFC, 6 mm fillet welded to both members
 - Top wall connection: 10 mm plate with 2 × M16 site anchors per stringer
@@ -68,7 +68,7 @@ This has been set up specifically for Tekla Structures 2023. The next useful ste
 
 The PFC stringers are modelled with Tekla rotation set to TOP and On plane set to RIGHT. The left and right PFCs use opposite modelling directions so the flat web faces are inward and the open channel/toes face outward. The PFC reference lines are the two inward web-face datums, 900 mm apart.
 
-The tread arrangement is a simple fabricated plate tread: a 10 mm horizontal tread spans between the PFC web-face datums. A vertical PL8 side plate is welded beneath each tread edge and each side plate is fixed to the adjacent PFC web with two M12 bolts.
+The tread arrangement is now a conventional shallow end-plate detail: a PL10 horizontal tread spans between the PFC web-face datums. A PL8 end plate runs the full 250 mm tread depth at each side but is only 70 mm deep. Each end plate is fillet welded along the tread edge and fixed to the adjacent PFC web with two M12 bolts. The stringers are PFC-180*75*20 to give the connection a little more usable web depth without making the stair unnecessarily heavy.
 
 The wall and floor anchor bolts are represented as Tekla bolt groups through the connection plates. Because the tool does not ask you to select a concrete wall or slab object, the anchor bolt group is attached to the plate itself as a modelling representation of the site anchors.
 
