@@ -22,13 +22,12 @@ The 1000 mm top platform is included so the stair can bridge the obstruction bel
 
 Open a Tekla Structures 2023 model, build **BeacomStair.sln**, then run the `BeacomStair` project.
 
-The tool connects to the currently open Tekla model and asks you to pick:
+The tool connects to the currently open Tekla model and asks for only two points:
 
-1. First point on the upper-floor/platform back edge.
-2. Second point on that edge.
-3. A point in the direction of the stair foot.
+1. **Start point** - pick the centre of the top platform back edge at upper-floor level.
+2. **Direction point** - pick anywhere in the direction the stair should run toward the foot.
 
-The first two points define the transverse direction. The third point tells the tool which side of the edge the platform and flight should project toward.
+The distance to the second point does not matter; it is used only to establish direction. The tool already knows the stair width, rise, going, platform length and overall run, so it derives the cross-stair direction automatically at 90 degrees to the picked run.
 
 ## Tekla references
 
