@@ -76,6 +76,13 @@ namespace BeacomStair
 
     internal sealed class StairBuilder
     {
+        private enum BoltPlaneKind
+        {
+            Horizontal,
+            StairSide,
+            Wall
+        }
+
         private sealed class PlatformParts
         {
             public ContourPlate Deck { get; set; }
@@ -333,6 +340,7 @@ namespace BeacomStair
                 LocalPoint(secondBoltX, sidePlateY, boltZ),
                 StairSettings.TreadBoltSize,
                 false,
+                BoltPlaneKind.StairSide,
                 "TREAD " + treadNumber +
                 (leftSide ? " LEFT" : " RIGHT") +
                 " SIDE PLATE - 2 M12 BOLTS TO PFC");
@@ -420,6 +428,7 @@ namespace BeacomStair
                 upperBolt,
                 StairSettings.AnchorBoltSize,
                 true,
+                BoltPlaneKind.Wall,
                 "WALL END PLATE " + side + " - 2 M16 ANCHORS");
         }
 
@@ -457,6 +466,7 @@ namespace BeacomStair
                 secondBolt,
                 StairSettings.AnchorBoltSize,
                 true,
+                BoltPlaneKind.Horizontal,
                 "BASE PLATE " + side + " - 2 M16 ANCHORS");
         }
 
@@ -722,43 +732,121 @@ namespace BeacomStair
             Point secondPosition,
             double boltSize,
             bool siteBolt,
+            BoltPlaneKind boltPlaneKind,
             string description)
         {
-            BoltArray bolts = new BoltArray
+            WorkPlaneHandler workPlaneHandler = _model.GetWorkPlaneHandler();
+            TransformationPlane originalPlane =
+                workPlaneHandler.GetCurrentTransformationPlane();
+
+            try
             {
-                PartToBeBolted = partToBeBolted,
-                PartToBoltTo = partToBoltTo,
-                FirstPosition = firstPosition,
-                SecondPosition = secondPosition,
-                BoltSize = boltSize,
-                Tolerance = 2.0,
-                BoltStandard = StairSettings.BoltStandard,
-                BoltType = siteBolt
-                    ? BoltGroup.BoltTypeEnum.BOLT_TYPE_SITE
-                    : BoltGroup.BoltTypeEnum.BOLT_TYPE_WORKSHOP,
-                CutLength = 100.0,
-                ExtraLength = 10.0,
-                ThreadInMaterial = BoltGroup.BoltThreadInMaterialEnum.THREAD_IN_MATERIAL_NO,
-                Bolt = true,
-                Washer1 = true,
-                Washer2 = false,
-                Washer3 = false,
-                Nut1 = true,
-                Nut2 = false
-            };
+                // The input points and stair axes are expressed in the user's current
+                // work plane. Convert them to global coordinates before creating the
+                // temporary work plane used by the bolt group.
+                Point globalFirst =
+                    originalPlane.TransformationMatrixToGlobal.Transform(firstPosition);
 
-            bolts.Position.Depth = Position.DepthEnum.MIDDLE;
-            bolts.Position.Plane = Position.PlaneEnum.MIDDLE;
-            bolts.Position.Rotation = Position.RotationEnum.FRONT;
+                Point globalSecond =
+                    originalPlane.TransformationMatrixToGlobal.Transform(secondPosition);
 
-            // One spacing gives two bolts.
-            bolts.AddBoltDistX(Distance(firstPosition, secondPosition));
-            bolts.AddBoltDistY(0.0);
+                Vector globalXAxis = ToGlobalVector(_xAxis, originalPlane);
+                Vector globalYAxis = ToGlobalVector(_yAxis, originalPlane);
+                Vector globalZAxis = ToGlobalVector(new V3(0.0, 0.0, 1.0), originalPlane);
 
-            InsertOrThrow(
-                bolts,
-                description + " [bolt: M" + boltSize.ToString("0") +
-                ", standard: " + StairSettings.BoltStandard + "]");
+                Vector planeAxisX;
+                Vector planeAxisY;
+
+                switch (boltPlaneKind)
+                {
+                    case BoltPlaneKind.StairSide:
+                        // X-Z plane. Bolt axis is across the stair through the PFC web.
+                        planeAxisX = globalXAxis;
+                        planeAxisY = globalZAxis;
+                        break;
+
+                    case BoltPlaneKind.Wall:
+                        // Y-Z wall plane. Bolt axis runs into the wall.
+                        planeAxisX = globalYAxis;
+                        planeAxisY = globalZAxis;
+                        break;
+
+                    default:
+                        // Horizontal X-Y plane. Bolt axis is vertical into the floor.
+                        planeAxisX = globalXAxis;
+                        planeAxisY = globalYAxis;
+                        break;
+                }
+
+                TransformationPlane boltPlane =
+                    new TransformationPlane(globalFirst, planeAxisX, planeAxisY);
+
+                workPlaneHandler.SetCurrentTransformationPlane(boltPlane);
+
+                Point localFirst =
+                    boltPlane.TransformationMatrixToLocal.Transform(globalFirst);
+
+                Point localSecond =
+                    boltPlane.TransformationMatrixToLocal.Transform(globalSecond);
+
+                BoltArray bolts = new BoltArray
+                {
+                    PartToBeBolted = partToBeBolted,
+                    PartToBoltTo = partToBoltTo,
+                    FirstPosition = localFirst,
+                    SecondPosition = localSecond,
+                    BoltSize = boltSize,
+                    Tolerance = 2.0,
+                    BoltStandard = StairSettings.BoltStandard,
+                    BoltType = siteBolt
+                        ? BoltGroup.BoltTypeEnum.BOLT_TYPE_SITE
+                        : BoltGroup.BoltTypeEnum.BOLT_TYPE_WORKSHOP,
+                    CutLength = 100.0,
+                    ExtraLength = 10.0,
+                    ThreadInMaterial = BoltGroup.BoltThreadInMaterialEnum.THREAD_IN_MATERIAL_NO,
+                    Bolt = true,
+                    Washer1 = true,
+                    Washer2 = false,
+                    Washer3 = false,
+                    Nut1 = true,
+                    Nut2 = false
+                };
+
+                bolts.Position.Depth = Position.DepthEnum.MIDDLE;
+                bolts.Position.Plane = Position.PlaneEnum.MIDDLE;
+                bolts.Position.Rotation = Position.RotationEnum.FRONT;
+
+                bolts.AddBoltDistX(Distance(localFirst, localSecond));
+                bolts.AddBoltDistY(0.0);
+
+                InsertOrThrow(
+                    bolts,
+                    description + " [bolt: M" + boltSize.ToString("0") +
+                    ", standard: " + StairSettings.BoltStandard + "]");
+            }
+            finally
+            {
+                workPlaneHandler.SetCurrentTransformationPlane(originalPlane);
+            }
+        }
+
+        private static Vector ToGlobalVector(
+            V3 vector,
+            TransformationPlane sourcePlane)
+        {
+            Point localOrigin = new Point(0.0, 0.0, 0.0);
+            Point localVectorEnd = new Point(vector.X, vector.Y, vector.Z);
+
+            Point globalOrigin =
+                sourcePlane.TransformationMatrixToGlobal.Transform(localOrigin);
+
+            Point globalVectorEnd =
+                sourcePlane.TransformationMatrixToGlobal.Transform(localVectorEnd);
+
+            return new Vector(
+                globalVectorEnd.X - globalOrigin.X,
+                globalVectorEnd.Y - globalOrigin.Y,
+                globalVectorEnd.Z - globalOrigin.Z);
         }
 
         private void CreateFilletWeld(Part mainPart, Part secondaryPart, string description)
