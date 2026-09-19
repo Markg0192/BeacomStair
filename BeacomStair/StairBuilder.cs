@@ -53,11 +53,8 @@ namespace BeacomStair
         public const double StringerJointPlateThickness = 10.0;
         public const double TopJointPlateLength = 180.0;
         public const double TopJointPlateDepth = 160.0;
-        public const string BottomJoiningPlateProfile = "PL10*55";
-        public const double BottomJoiningPlateBackFromJoint = 160.0;
-        public const double BottomJoiningPlateDownFromStringerTop = 65.0;
-        public const double BottomJoiningPlatePostInset = 25.0;
-        public const double BottomJoiningPlatePostHeight = 70.0;
+        public const string BottomJoiningPlateProfile = "PL10*50";
+        public const double BottomJoiningPlateLowerHeight = 100.0;
         public static double BottomStringerJointHeight
         {
             get
@@ -833,42 +830,33 @@ namespace BeacomStair
             bool leftSide,
             string side)
         {
-            // Create this as a two-point plate (Beam with a PL profile), not a
-            // ContourPlate. Only the diagonal centreline is defined here; Tekla
-            // supplies the 55 mm plate width from PL10*55.
+            // Two-point PL10x50 diagonal exactly across the vertical PFC web.
+            //
+            // Point 1 = the actual top/front meeting point of the sloping and
+            //           vertical PFCs at Z = 201.33 mm.
+            // Point 2 = the opposite edge of the 180 mm PFC footprint at
+            //           Z = 100 mm.
+            //
+            // This matches the short diagonal shown in the user's marked-up
+            // side elevation instead of running up the sloping stringer.
             double plateY = leftSide
                 ? stringerY + (StairSettings.StringerJointPlateThickness / 2.0)
                 : stringerY - (StairSettings.StringerJointPlateThickness / 2.0);
 
-            double slopingX =
-                StairSettings.OverallLength -
-                StairSettings.BottomJoiningPlateBackFromJoint;
-
-            double slopingZ =
-                FlightStringerTopZ(slopingX) -
-                StairSettings.BottomJoiningPlateDownFromStringerTop;
-
-            double postX =
-                StairSettings.OverallLength -
-                StairSettings.BottomJoiningPlatePostInset;
-
-            double postZ =
-                StairSettings.BottomJoiningPlatePostHeight;
-
-            Point startPoint = LocalPoint(
-                slopingX,
+            Point jointPoint = LocalPoint(
+                StairSettings.OverallLength,
                 plateY,
-                slopingZ);
+                StairSettings.BottomStringerJointHeight);
 
-            Point endPoint = LocalPoint(
-                postX,
+            Point lowerBackPoint = LocalPoint(
+                StairSettings.OverallLength - StairSettings.StringerDepth,
                 plateY,
-                postZ);
+                StairSettings.BottomJoiningPlateLowerHeight);
 
             Beam joiningPlate = CreateTwoPointWebPlate(
                 "BEACOM BOTTOM JOINING PLATE " + side,
-                startPoint,
-                endPoint);
+                jointPoint,
+                lowerBackPoint);
 
             CreateFilletWeld(
                 flightStringer,
