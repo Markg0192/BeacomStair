@@ -831,10 +831,9 @@ namespace BeacomStair
 
             try
             {
-                // A vertical beam has no horizontal component from which Tekla can
-                // infer the stair direction. Build it in a temporary work plane
-                // explicitly aligned with the stair X/Y axes so its rotation is
-                // independent of whatever work plane the user currently has active.
+                // Create the short upright as a true Tekla COLUMN-type member.
+                // This gives us the same Vertical / Rotation / Horizontal controls
+                // that were proven manually in Tekla.
                 Point globalOrigin =
                     originalPlane.TransformationMatrixToGlobal.Transform(
                         _origin.ToPoint());
@@ -867,30 +866,46 @@ namespace BeacomStair
                 Point localTop =
                     stairPlane.TransformationMatrixToLocal.Transform(globalTop);
 
-                Beam beam = new Beam(localBottom, localTop)
+                Beam column = new Beam(Beam.BeamTypeEnum.COLUMN)
                 {
+                    StartPoint = localBottom,
+                    EndPoint = localTop,
                     Name = name,
                     Class = "2"
                 };
 
-                beam.Profile.ProfileString = StairSettings.StringerProfile;
-                beam.Material.MaterialString = StairSettings.Material;
+                column.Profile.ProfileString = StairSettings.StringerProfile;
+                column.Material.MaterialString = StairSettings.Material;
 
-                // With the work plane locked to the stair, FRONT/BACK now genuinely
-                // mirror the two channels across the stair centreline.
-                beam.Position.Plane = Position.PlaneEnum.RIGHT;
-                beam.Position.Depth = Position.DepthEnum.MIDDLE;
-                beam.Position.Rotation = leftSide
-                    ? Position.RotationEnum.FRONT
-                    : Position.RotationEnum.BACK;
+                // Exact Tekla settings proven manually:
+                //
+                // LEFT  = Vertical DOWN, Rotation TOP,   Horizontal RIGHT
+                // RIGHT = Vertical UP,   Rotation BELOW, Horizontal RIGHT
+                //
+                // For COLUMN-type members:
+                // Horizontal -> Plane
+                // Vertical   -> Depth (Behind = Down, Front = Up)
+                column.Position.Plane = Position.PlaneEnum.RIGHT;
+
+                if (leftSide)
+                {
+                    column.Position.Depth = Position.DepthEnum.BEHIND;
+                    column.Position.Rotation = Position.RotationEnum.TOP;
+                }
+                else
+                {
+                    column.Position.Depth = Position.DepthEnum.FRONT;
+                    column.Position.Rotation = Position.RotationEnum.BELOW;
+                }
 
                 InsertOrThrow(
-                    beam,
-                    name + " [vertical " + StairSettings.StringerProfile +
-                    ", stair-aligned work plane, rotation: " +
-                    (leftSide ? "FRONT" : "BACK") + "]");
+                    column,
+                    name +
+                    (leftSide
+                        ? " [COLUMN: Down / Top / Right]"
+                        : " [COLUMN: Up / Below / Right]"));
 
-                return beam;
+                return column;
             }
             finally
             {
