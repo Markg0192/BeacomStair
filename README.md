@@ -86,3 +86,12 @@ All generated bolts are SITE bolts. Bolt cut length is 200 mm and extra length i
 ## Refined bottom connection
 
 The short bottom PFC is modelled bottom-to-top and uses FRONT/BACK rotation rather than TOP so the left and right channels mirror correctly as vertical members. The PL10 splice at the sloping-to-vertical PFC joint is a compact corner plate on the inside web face. The base plate is 300 × 180 × 10 with the two M16 site anchors at 220 mm centres so they sit outside the PFC footprint rather than clashing with it.
+
+
+## Proven bottom upright orientation
+
+The two short bottom PFCs are created as Tekla COLUMN-type members so their Position settings match the property pane directly:
+- Left: Vertical Down / Rotation Top / Horizontal Right
+- Right: Vertical Up / Rotation Below / Horizontal Right
+
+Their model extents remain from 10.00 mm above floor (top of base plate) to the calculated 201.33 mm stringer joint level.
