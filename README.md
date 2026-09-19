@@ -112,3 +112,8 @@ The base plate is now 320 × 180 × 10 and is shifted half the PFC depth toward 
 ## Bottom joint alignment refinement
 
 The horizontal PL10 joining plate now matches the top footprint of the PFC: 180 × 75 × 10, running from one full PFC depth behind the joint to the sloping-stringer / vertical-upright insertion-line intersection. The base plate remains 320 × 180 × 10 but its centre is shifted 90 mm in the opposite direction so it sits under the actual vertical PFC footprint rather than away from it.
+
+
+## Refined PFC joining plates
+
+Both the top platform/flight joint and the bottom flight/upright joint now use the same two-point PL10×70 joining-plate detail. The plate is 180 mm long, with 2 mm more trim at the upper/start end than the lower/end. Across the 75 mm PFC footprint, the 70 mm plate is pushed outward so its outside edge is flush with the PFC and 5 mm remains at the web side for welding. Each adjoining PFC is fitting-cut parallel to the joining plate, 5 mm either side of its centre plane, and the joining plate is 6 mm fillet welded to both PFCs.
