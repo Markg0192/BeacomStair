@@ -112,7 +112,7 @@ namespace BeacomStair
             double halfWidth = StairSettings.TreadWidth / 2.0;
             double halfStringerSpacing = StairSettings.StringerSpacing / 2.0;
 
-            // 1000 mm top platform plate, with its back edge on the two-point floor edge.
+            // 1000 mm top platform plate, centred on the picked start point at its back edge.
             CreatePlate(
                 "BEACOM PLATFORM",
                 StairSettings.TreadProfile,
