@@ -43,11 +43,13 @@ The stair geometry above is fixed. The section/plate defaults below are delibera
 
 - Stringers/platform side beams: `PFC-150*75*18`
 - Treads/platform deck: `PL10`
-- Tread side plates: `PL8`, vertical at each side of every tread
-- Tread fixing: 2 × M12 bolts through each side plate into the PFC web
+- Tread side plates: `PL8`, 150 × 80 mm, vertical at each side of every tread
+- Tread fixing: 2 × M12 bolts at 75 mm centres through each side plate into the PFC web
 - Risers: `PL6`
+- Platform/flight joint: 10 mm web plate at each PFC, 6 mm fillet welded to both members
 - Top wall connection: 10 mm plate with 2 × M16 site anchors per stringer
-- Bottom floor connection: 10 mm base plate with 2 × M16 site anchors per stringer
+- Bottom stringer detail: sloping PFC ends about 250 mm above floor, connects through a 10 mm web plate to a short vertical PFC
+- Bottom floor connection: vertical PFC welded to a 10 mm base plate with 2 × M16 site anchors
 - Welded joints: 6 mm fillet welds
 - Handrail/guard: `CHS42.4*3.2` (42.4 mm OD CHS tube)
 - Clear tread/platform width between PFC web faces: 900 mm
@@ -69,3 +71,8 @@ The PFC stringers are modelled with Tekla rotation set to TOP and On plane set t
 The tread arrangement is a simple fabricated plate tread: a 10 mm horizontal tread spans between the PFC web-face datums. A vertical PL8 side plate is welded beneath each tread edge and each side plate is fixed to the adjacent PFC web with two M12 bolts.
 
 The wall and floor anchor bolts are represented as Tekla bolt groups through the connection plates. Because the tool does not ask you to select a concrete wall or slab object, the anchor bolt group is attached to the plate itself as a modelling representation of the site anchors.
+
+
+## Level convention
+
+The quoted stair levels are finished walking-surface levels. The top face of the PL10 landing is at exactly 3170 mm above the picked wall/floor datum. Horizontal PL10 tread plates are similarly offset by half their thickness so their top faces, rather than their centre planes, land on the calculated tread levels.
