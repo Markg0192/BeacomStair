@@ -28,10 +28,10 @@ namespace BeacomStair
         public const string EndPlateProfile = "PL10";
         public const string Material = "S355JR";
 
-        // Tread brackets.
-        public const double TreadBracketLength = 180.0;
-        public const double TreadBracketWidth = 100.0;
-        public const double TreadBracketThickness = 8.0;
+        // Tread detail: horizontal PL10 tread with a vertical plate at each side.
+        public const double TreadSidePlateLength = 200.0;
+        public const double TreadSidePlateHeight = 100.0;
+        public const double TreadSidePlateThickness = 8.0;
         public const double TreadPlateThickness = 10.0;
         public const double TreadBoltSize = 12.0;
         public const double TreadBoltSpacing = 100.0;
@@ -170,22 +170,22 @@ namespace BeacomStair
                 LocalPoint(0.0, halfWidth, platformZ),
                 "3");
 
-            // PFC toes face inward. The left member is deliberately modelled in the
-            // opposite start/end direction because Tekla defines channel orientation
-            // from the yellow start handle toward the magenta end handle.
+            // PFC flat webs face inward toward the stair and the open channel/toes
+            // face outward. Left/right use opposite start/end directions because
+            // Tekla defines channel handedness from start handle to end handle.
             Beam leftStringer = CreatePfcBeam(
                 "BEACOM PLATFORM STRINGER L",
                 LocalPoint(0.0, -halfStringerSpacing, stringerTopZ),
                 LocalPoint(StairSettings.PlatformLength, -halfStringerSpacing, stringerTopZ),
                 "2",
-                true);
+                false);
 
             Beam rightStringer = CreatePfcBeam(
                 "BEACOM PLATFORM STRINGER R",
                 LocalPoint(0.0, halfStringerSpacing, stringerTopZ),
                 LocalPoint(StairSettings.PlatformLength, halfStringerSpacing, stringerTopZ),
                 "2",
-                false);
+                true);
 
             CreateFilletWeld(leftStringer, deck, "PLATFORM DECK TO LEFT PFC");
             CreateFilletWeld(rightStringer, deck, "PLATFORM DECK TO RIGHT PFC");
@@ -212,14 +212,14 @@ namespace BeacomStair
                 LocalPoint(StairSettings.PlatformLength, -halfStringerSpacing, StairSettings.TotalRise),
                 LocalPoint(StairSettings.OverallLength, -halfStringerSpacing, StairSettings.StringerDepth),
                 "2",
-                true);
+                false);
 
             Beam rightStringer = CreatePfcBeam(
                 "BEACOM FLIGHT STRINGER R",
                 LocalPoint(StairSettings.PlatformLength, halfStringerSpacing, StairSettings.TotalRise),
                 LocalPoint(StairSettings.OverallLength, halfStringerSpacing, StairSettings.StringerDepth),
                 "2",
-                false);
+                true);
 
             CreateFilletWeld(platform.LeftStringer, leftStringer, "LEFT PLATFORM PFC TO FLIGHT PFC");
             CreateFilletWeld(platform.RightStringer, rightStringer, "RIGHT PLATFORM PFC TO FLIGHT PFC");
@@ -247,7 +247,7 @@ namespace BeacomStair
 
                 result.Treads.Add(tread);
 
-                CreateTreadBracketAndBolts(
+                CreateTreadSidePlateAndBolts(
                     tread,
                     leftStringer,
                     x1,
@@ -256,7 +256,7 @@ namespace BeacomStair
                     true,
                     i + 1);
 
-                CreateTreadBracketAndBolts(
+                CreateTreadSidePlateAndBolts(
                     tread,
                     rightStringer,
                     x1,
@@ -271,7 +271,7 @@ namespace BeacomStair
             return result;
         }
 
-        private void CreateTreadBracketAndBolts(
+        private void CreateTreadSidePlateAndBolts(
             ContourPlate tread,
             Beam stringer,
             double treadStartX,
@@ -280,43 +280,60 @@ namespace BeacomStair
             bool leftSide,
             int treadNumber)
         {
-            double bracketX1 = treadStartX + ((StairSettings.Going - StairSettings.TreadBracketLength) / 2.0);
-            double bracketX2 = bracketX1 + StairSettings.TreadBracketLength;
-            double bracketZ =
-                treadZ -
-                (StairSettings.TreadPlateThickness / 2.0) -
-                (StairSettings.TreadBracketThickness / 2.0);
+            // A conventional tread end plate: vertical plate below the tread edge,
+            // welded to the PL10 tread and bolted through the PFC web.
+            double sidePlateX1 =
+                treadStartX +
+                ((StairSettings.Going - StairSettings.TreadSidePlateLength) / 2.0);
 
-            double innerDirection = leftSide ? 1.0 : -1.0;
-            double bracketOuterY = stringerY;
-            double bracketInnerY = stringerY + (innerDirection * StairSettings.TreadBracketWidth);
+            double sidePlateX2 =
+                sidePlateX1 + StairSettings.TreadSidePlateLength;
 
-            ContourPlate bracket = CreatePlate(
-                "BEACOM TREAD BRACKET " + treadNumber + (leftSide ? " L" : " R"),
+            double sidePlateTopZ =
+                treadZ - (StairSettings.TreadPlateThickness / 2.0);
+
+            double sidePlateBottomZ =
+                sidePlateTopZ - StairSettings.TreadSidePlateHeight;
+
+            // Centre the PL8 plate just inside the stringer reference plane so its
+            // outer face sits on the PFC web plane.
+            double sidePlateY = leftSide
+                ? stringerY + (StairSettings.TreadSidePlateThickness / 2.0)
+                : stringerY - (StairSettings.TreadSidePlateThickness / 2.0);
+
+            ContourPlate sidePlate = CreatePlate(
+                "BEACOM TREAD SIDE PLATE " + treadNumber + (leftSide ? " L" : " R"),
                 StairSettings.TreadBracketProfile,
-                LocalPoint(bracketX1, bracketOuterY, bracketZ),
-                LocalPoint(bracketX2, bracketOuterY, bracketZ),
-                LocalPoint(bracketX2, bracketInnerY, bracketZ),
-                LocalPoint(bracketX1, bracketInnerY, bracketZ),
+                LocalPoint(sidePlateX1, sidePlateY, sidePlateTopZ),
+                LocalPoint(sidePlateX2, sidePlateY, sidePlateTopZ),
+                LocalPoint(sidePlateX2, sidePlateY, sidePlateBottomZ),
+                LocalPoint(sidePlateX1, sidePlateY, sidePlateBottomZ),
                 "6");
 
             CreateFilletWeld(
-                stringer,
-                bracket,
-                "TREAD " + treadNumber + (leftSide ? " LEFT" : " RIGHT") + " BRACKET TO PFC");
+                tread,
+                sidePlate,
+                "TREAD " + treadNumber +
+                (leftSide ? " LEFT" : " RIGHT") +
+                " SIDE PLATE TO TREAD");
 
-            double boltY = (bracketOuterY + bracketInnerY) / 2.0;
-            double firstBoltX = treadStartX + 75.0;
+            double boltZ = sidePlateTopZ - (StairSettings.TreadSidePlateHeight / 2.0);
+            double firstBoltX =
+                treadStartX +
+                ((StairSettings.Going - StairSettings.TreadBoltSpacing) / 2.0);
+
             double secondBoltX = firstBoltX + StairSettings.TreadBoltSpacing;
 
             CreateTwoBoltArray(
-                tread,
-                bracket,
-                LocalPoint(firstBoltX, boltY, treadZ),
-                LocalPoint(secondBoltX, boltY, treadZ),
+                sidePlate,
+                stringer,
+                LocalPoint(firstBoltX, sidePlateY, boltZ),
+                LocalPoint(secondBoltX, sidePlateY, boltZ),
                 StairSettings.TreadBoltSize,
                 false,
-                "TREAD " + treadNumber + (leftSide ? " LEFT" : " RIGHT") + " M12 BOLTS");
+                "TREAD " + treadNumber +
+                (leftSide ? " LEFT" : " RIGHT") +
+                " SIDE PLATE - 2 M12 BOLTS TO PFC");
         }
 
         private void CreateRisers(PlatformParts platform, FlightParts flight)
@@ -620,6 +637,8 @@ namespace BeacomStair
 
             beam.Profile.ProfileString = StairSettings.StringerProfile;
             beam.Material.MaterialString = StairSettings.Material;
+            // TOP keeps the PFC standing upright. BEHIND keeps the section below
+            // the reference/pitch line so the tread geometry remains above it.
             beam.Position.Plane = Position.PlaneEnum.MIDDLE;
             beam.Position.Depth = Position.DepthEnum.BEHIND;
             beam.Position.Rotation = Position.RotationEnum.TOP;
