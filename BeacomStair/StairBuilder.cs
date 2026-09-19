@@ -54,7 +54,7 @@ namespace BeacomStair
         public const double TopJointPlateLength = 180.0;
         public const double TopJointPlateDepth = 160.0;
         public const string BottomJoiningPlateProfile = "PL10*50";
-        public const double BottomJoiningPlateLowerHeight = 125.0;
+        public const double BottomJoiningPlateLowerHeight = 117.8;
         public static double BottomStringerJointHeight
         {
             get
