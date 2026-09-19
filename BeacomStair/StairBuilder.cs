@@ -46,13 +46,14 @@ namespace BeacomStair
         // Top and bottom connections.
         public const double WallPlateWidth = 180.0;
         public const double WallPlateHeight = 220.0;
-        public const double BasePlateLength = 320.0;
-        public const double BasePlateWidth = 180.0;
+        // Base plate is deliberately kept fully inside the PFC footprint.
+        public const double BasePlateLength = 160.0;
+        public const double BasePlateWidth = 65.0;
         public const double BasePlateThickness = 10.0;
         public const double StringerJointPlateThickness = 10.0;
         public const double TopJointPlateLength = 180.0;
         public const double TopJointPlateDepth = 160.0;
-        public const double BottomJoiningPlateLength = 180.0;
+        public const double BottomJoiningPlateLength = 250.0;
         public const double BottomJoiningPlateWidth = 75.0;
         public static double BottomStringerJointHeight
         {
@@ -66,7 +67,7 @@ namespace BeacomStair
         }
         public const double AnchorBoltSize = 16.0;
         public const double WallAnchorBoltSpacing = 100.0;
-        public const double BaseAnchorBoltSpacing = 250.0;
+        public const double BaseAnchorBoltSpacing = 90.0;
         public const string BoltStandard = "8.8XOX";
 
         // Welds.
@@ -570,9 +571,10 @@ namespace BeacomStair
         {
             double halfLength = StairSettings.BasePlateLength / 2.0;
             double halfWidth = StairSettings.BasePlateWidth / 2.0;
-            // The proven Tekla column positioning puts the actual 180 mm PFC
-            // footprint on the wall/up-stair side of the insertion line.
-            // Centre the base plate under that real footprint.
+
+            // Proven column positioning puts the 180 mm PFC footprint on the
+            // wall/up-stair side of the insertion line. Centre the small base
+            // plate within that footprint: 160 x 65 fits wholly inside 180 x 75.
             double x =
                 StairSettings.OverallLength - (StairSettings.StringerDepth / 2.0);
 
@@ -825,25 +827,9 @@ namespace BeacomStair
             double stringerY,
             string side)
         {
-            // Horizontal PL10 cap/joining plate at the bottom corner.
-            // It sits outside the tread clear width, directly over the short
-            // vertical PFC and under the end of the sloping PFC.
-            //
-            // Top face is at the bottom-tread walking level (211.33 mm),
-            // bottom face is at the proven upright top level (201.33 mm).
-            double plateCentreZ =
-                StairSettings.BottomStringerJointHeight +
-                (StairSettings.StringerJointPlateThickness / 2.0);
-
-            // The vertical PFC footprint runs from one section depth
-            // behind the joint up to the joint insertion line. Make the cap plate
-            // match that footprint exactly so it sits at the true intersection.
-            double x1 =
-                StairSettings.OverallLength - StairSettings.StringerDepth;
-
-            double x2 =
-                StairSettings.OverallLength;
-
+            // Sloping PL10 joining plate at the bottom intersection.
+            // It starts at the vertical-PFC / sloping-PFC joint and runs uphill
+            // parallel to the stair pitch, matching the detail shown in the model.
             double outward =
                 stringerY < 0.0 ? -1.0 : 1.0;
 
@@ -851,13 +837,26 @@ namespace BeacomStair
             double y2 =
                 stringerY + (outward * StairSettings.BottomJoiningPlateWidth);
 
+            double xBottom = StairSettings.OverallLength;
+            double xTop =
+                StairSettings.OverallLength - StairSettings.BottomJoiningPlateLength;
+
+            double zBottom =
+                StairSettings.BottomStringerJointHeight +
+                (StairSettings.StringerJointPlateThickness / 2.0);
+
+            double zTop =
+                zBottom +
+                (StairSettings.BottomJoiningPlateLength *
+                 (StairSettings.Rise / StairSettings.Going));
+
             ContourPlate plate = CreatePlate(
                 "BEACOM BOTTOM JOINING PLATE " + side,
                 StairSettings.EndPlateProfile,
-                LocalPoint(x1, y1, plateCentreZ),
-                LocalPoint(x2, y1, plateCentreZ),
-                LocalPoint(x2, y2, plateCentreZ),
-                LocalPoint(x1, y2, plateCentreZ),
+                LocalPoint(xTop, y1, zTop),
+                LocalPoint(xBottom, y1, zBottom),
+                LocalPoint(xBottom, y2, zBottom),
+                LocalPoint(xTop, y2, zTop),
                 "8");
 
             CreateFilletWeld(
