@@ -890,15 +890,18 @@ namespace BeacomStair
                 // Vertical   -> Depth (Behind = Down, Front = Up)
                 if (leftSide)
                 {
-                    column.Position.Plane = Position.PlaneEnum.RIGHT;
+                    // This is the physical left-hand upright in the current stair
+                    // orientation. Tekla was showing Horizontal = Left, so use
+                    // Plane LEFT here to make the property pane resolve to Right.
+                    // Keep Down / Top unchanged.
+                    column.Position.Plane = Position.PlaneEnum.LEFT;
                     column.Position.Depth = Position.DepthEnum.BEHIND;
                     column.Position.Rotation = Position.RotationEnum.TOP;
                 }
                 else
                 {
-                    // For the Up / Below upright Tekla resolves the local plane
-                    // opposite to the property-pane label. LEFT here produces
-                    // Horizontal = Right in the model.
+                    // Physical right-hand upright is already correct.
+                    // Do not alter its proven Up / Below / Right arrangement.
                     column.Position.Plane = Position.PlaneEnum.LEFT;
                     column.Position.Depth = Position.DepthEnum.FRONT;
                     column.Position.Rotation = Position.RotationEnum.BELOW;
