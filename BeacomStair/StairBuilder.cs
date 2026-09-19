@@ -57,7 +57,6 @@ namespace BeacomStair
         public const string BottomJoiningPlateProfile = "PL10*50";
         public const double BottomJoiningPlateLength = 180.0;
         public const double BottomJoiningPlateLowerHeight = 117.8;
-        public const double BottomPfcCutBack = 5.0;
         public static double BottomStringerJointHeight
         {
             get
@@ -251,33 +250,13 @@ namespace BeacomStair
             double flightTopZ =
                 StairSettings.TotalRise - StairSettings.TreadPlateThickness;
 
-            // Pull the physical end of the sloping PFC 5 mm back along
-            // its own axis so it clears the diagonal joining plate.
-            double flightSlope =
-                StairSettings.Rise / StairSettings.Going;
-
-            double flightAxisFactor =
-                Math.Sqrt(1.0 + (flightSlope * flightSlope));
-
-            double stringerCutBackX =
-                StairSettings.BottomPfcCutBack / flightAxisFactor;
-
-            double stringerCutBackZ =
-                stringerCutBackX * flightSlope;
-
-            double bottomStringerEndX =
-                StairSettings.OverallLength - stringerCutBackX;
-
-            double bottomStringerEndZ =
-                StairSettings.BottomStringerJointHeight + stringerCutBackZ;
-
             Beam leftStringer = CreatePfcBeam(
                 "BEACOM FLIGHT STRINGER L",
                 LocalPoint(StairSettings.PlatformLength, -halfStringerSpacing, flightTopZ),
                 LocalPoint(
-                    bottomStringerEndX,
+                    StairSettings.OverallLength,
                     -halfStringerSpacing,
-                    bottomStringerEndZ),
+                    StairSettings.BottomStringerJointHeight),
                 "2",
                 false);
 
@@ -285,9 +264,9 @@ namespace BeacomStair
                 "BEACOM FLIGHT STRINGER R",
                 LocalPoint(StairSettings.PlatformLength, halfStringerSpacing, flightTopZ),
                 LocalPoint(
-                    bottomStringerEndX,
+                    StairSettings.OverallLength,
                     halfStringerSpacing,
-                    bottomStringerEndZ),
+                    StairSettings.BottomStringerJointHeight),
                 "2",
                 true);
 
@@ -298,7 +277,7 @@ namespace BeacomStair
                 StairSettings.OverallLength,
                 -halfStringerSpacing,
                 basePlateTopZ,
-                StairSettings.BottomStringerJointHeight - StairSettings.BottomPfcCutBack,
+                StairSettings.BottomStringerJointHeight,
                 true);
 
             Beam rightBottomPost = CreateVerticalPfcBeam(
@@ -306,7 +285,7 @@ namespace BeacomStair
                 StairSettings.OverallLength,
                 halfStringerSpacing,
                 basePlateTopZ,
-                StairSettings.BottomStringerJointHeight - StairSettings.BottomPfcCutBack,
+                StairSettings.BottomStringerJointHeight,
                 false);
 
             CreateBottomJoiningPlate(
@@ -809,13 +788,9 @@ namespace BeacomStair
             bool leftSide,
             string side)
         {
-            // The two-point plate is rotated 90 degrees so its 50 mm
-            // width runs across the PFC footprint. Put its centreline 25 mm
-            // outward from the inward web datum so the whole PL10*50 sits
-            // inside the 75 mm channel footprint.
             double plateY = leftSide
-                ? stringerY - 25.0
-                : stringerY + 25.0;
+                ? stringerY + (StairSettings.StringerJointPlateThickness / 2.0)
+                : stringerY - (StairSettings.StringerJointPlateThickness / 2.0);
 
             double x1 =
                 StairSettings.PlatformLength -
@@ -927,6 +902,14 @@ namespace BeacomStair
                 trimmedStart,
                 trimmedEnd);
 
+            // Do not move the stringer node. Fit the physical end of the PFC
+            // directly to the end face of the two-point joining plate.
+            CreateFittingAtPlateEnd(
+                flightStringer,
+                trimmedStart,
+                trimmedEnd,
+                "BOTTOM FLIGHT PFC " + side + " TO JOINING PLATE FACE");
+
             CreateFilletWeld(
                 flightStringer,
                 joiningPlate,
@@ -936,6 +919,47 @@ namespace BeacomStair
                 verticalPfc,
                 joiningPlate,
                 "BOTTOM TWO-POINT JOINING PLATE " + side + " TO VERTICAL PFC");
+        }
+
+        private void CreateFittingAtPlateEnd(
+            Beam beam,
+            Point plateEnd,
+            Point otherPlateEnd,
+            string description)
+        {
+            // The fitting plane is the actual end face of the two-point plate:
+            // its normal follows the plate centreline, while the plane itself
+            // spans across the stair and perpendicular to that centreline.
+            Vector plateDirection = new Vector(
+                otherPlateEnd.X - plateEnd.X,
+                otherPlateEnd.Y - plateEnd.Y,
+                otherPlateEnd.Z - plateEnd.Z);
+
+            plateDirection.Normalize();
+
+            Vector acrossStair = new Vector(
+                _yAxis.X,
+                _yAxis.Y,
+                0.0);
+
+            acrossStair.Normalize();
+
+            Vector inPlane = plateDirection.Cross(acrossStair);
+            inPlane.Normalize();
+
+            Fitting fitting = new Fitting
+            {
+                Father = beam,
+                Plane = new Tekla.Structures.Model.Plane()
+            };
+
+            fitting.Plane.Origin = plateEnd;
+            fitting.Plane.AxisX = acrossStair;
+            fitting.Plane.AxisY = inPlane;
+
+            InsertOrThrow(
+                fitting,
+                description + " [fit at two-point plate end face]");
         }
 
         private Beam CreateTwoPointWebPlate(
