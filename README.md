@@ -45,7 +45,7 @@ The stair geometry above is fixed. The section/plate defaults below are delibera
 - Treads/platform deck: `PL10`
 - Tread end plates: `PL8`, full 250 mm tread depth × 70 mm deep
 - Tread fixing: 2 × M12 bolts per end plate; first bolt 30 mm from leading edge, 125 mm centres
-- Tread kickers: `PL6`, 50 mm upstand at the back edge of each tread, extending 10 mm below the tread top level for welding
+- Tread kickers: `PL6`, 50 mm above the tread top and 10 mm below the tread underside; kicker face sits flush to the tread edge with no plate overlap
 - Platform/flight joint: 10 mm web plate at each PFC, 6 mm fillet welded to both members
 - Top wall connection: 10 mm plate with 2 × M16 site anchors per stringer
 - Bottom stringer detail: sloping PFC ends about 250 mm above floor, connects through a 10 mm web plate to a short vertical PFC
