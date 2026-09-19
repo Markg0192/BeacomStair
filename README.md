@@ -91,7 +91,7 @@ The short bottom PFC is modelled bottom-to-top and uses FRONT/BACK rotation rath
 ## Proven bottom upright orientation
 
 The two short bottom PFCs are created as Tekla COLUMN-type members so their Position settings match the property pane directly:
-- Left: Vertical Down / Rotation Top / Horizontal Right
-- Right: Vertical Up / Rotation Below / Horizontal Right
+- Right: Vertical Down / Rotation Top / Horizontal Right
+- Left: Vertical Up / Rotation Below / Horizontal Right
 
 Their model extents remain from 10.00 mm above floor (top of base plate) to the calculated 201.33 mm stringer joint level.
