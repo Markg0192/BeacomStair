@@ -51,7 +51,16 @@ namespace BeacomStair
         public const double TopJointPlateDepth = 160.0;
         public const double BottomJointPlateLength = 160.0;
         public const double BottomJointPlateDepth = 180.0;
-        public const double BottomStringerJointHeight = 250.0;
+        public static double BottomStringerJointHeight
+        {
+            get
+            {
+                // Keep the PFC reference line exactly parallel to the stair pitch.
+                // Top reference is 10 mm below the 3170 finished landing surface.
+                return (TotalRise - TreadPlateThickness) -
+                       (FlightRun * (Rise / Going));
+            }
+        }
         public const double AnchorBoltSize = 16.0;
         public const double AnchorBoltSpacing = 100.0;
         public const string BoltStandard = "8.8XOX";
@@ -694,8 +703,10 @@ namespace BeacomStair
             double topZ =
                 StairSettings.TotalRise - StairSettings.TreadPlateThickness;
 
+            // This line is deliberately derived from the same rise/going ratio as
+            // the treads so the PFC remains parallel to every tread connection.
             return topZ -
-                   (ratio * (topZ - StairSettings.BottomStringerJointHeight));
+                   (distance * (StairSettings.Rise / StairSettings.Going));
         }
 
         private Point LocalPoint(double x, double y, double z)
