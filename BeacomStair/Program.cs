@@ -27,17 +27,14 @@ namespace BeacomStair
 
                 Picker picker = new Picker();
 
-                Point edgeStart = picker.PickPoint(
-                    "BeacomStair: pick the FIRST point on the upper-floor / platform back edge.");
+                Point startPoint = picker.PickPoint(
+                    "BeacomStair: pick the CENTRE of the top platform back edge.");
 
-                Point edgeEnd = picker.PickPoint(
-                    "BeacomStair: pick the SECOND point on the upper-floor / platform back edge.");
-
-                Point towardFoot = picker.PickPoint(
-                    "BeacomStair: pick any point in the direction you want the stair FOOT to run.");
+                Point directionPoint = picker.PickPoint(
+                    "BeacomStair: pick any point in the direction the stair should run toward the FOOT.");
 
                 StairBuilder builder = new StairBuilder(model);
-                StairBuildResult result = builder.Build(edgeStart, edgeEnd, towardFoot);
+                StairBuildResult result = builder.Build(startPoint, directionPoint);
 
                 model.CommitChanges();
 
