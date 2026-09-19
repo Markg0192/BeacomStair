@@ -879,8 +879,11 @@ namespace BeacomStair
 
                 // Exact Tekla settings proven manually:
                 //
-                // RIGHT = Vertical DOWN, Rotation TOP,   Horizontal RIGHT
-                // LEFT  = Vertical UP,   Rotation BELOW, Horizontal RIGHT
+                // NOTE: leftSide is the stair-local Y-side flag, not the physical
+                // left/right label seen in the user's model view.
+                //
+                // leftSide == true  -> Down / Top / Right
+                // leftSide == false -> Up / Below / Right
                 //
                 // For COLUMN-type members:
                 // Horizontal -> Plane
@@ -889,21 +892,21 @@ namespace BeacomStair
 
                 if (leftSide)
                 {
-                    column.Position.Depth = Position.DepthEnum.FRONT;
-                    column.Position.Rotation = Position.RotationEnum.BELOW;
+                    column.Position.Depth = Position.DepthEnum.BEHIND;
+                    column.Position.Rotation = Position.RotationEnum.TOP;
                 }
                 else
                 {
-                    column.Position.Depth = Position.DepthEnum.BEHIND;
-                    column.Position.Rotation = Position.RotationEnum.TOP;
+                    column.Position.Depth = Position.DepthEnum.FRONT;
+                    column.Position.Rotation = Position.RotationEnum.BELOW;
                 }
 
                 InsertOrThrow(
                     column,
                     name +
                     (leftSide
-                        ? " [COLUMN: Up / Below / Right]"
-                        : " [COLUMN: Down / Top / Right]"));
+                        ? " [COLUMN: Down / Top / Right]"
+                        : " [COLUMN: Up / Below / Right]"));
 
                 return column;
             }
