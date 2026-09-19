@@ -18,7 +18,9 @@ namespace BeacomStair
         public const double ClearBetweenHandrails = 900.0;
 
         // Main steelwork.
-        public const double TreadWidth = 1050.0;
+        // The PFC reference lines represent the two inward web faces.
+        // This gives a genuine 900 mm clear tread width between stringers.
+        public const double TreadWidth = 900.0;
         public const double StringerSpacing = 900.0;
         public const double StringerDepth = 150.0;
         public const string StringerProfile = "PFC-150*75*18";
@@ -637,16 +639,21 @@ namespace BeacomStair
 
             beam.Profile.ProfileString = StairSettings.StringerProfile;
             beam.Material.MaterialString = StairSettings.Material;
-            // TOP keeps the PFC standing upright. BEHIND keeps the section below
-            // the reference/pitch line so the tread geometry remains above it.
-            beam.Position.Plane = Position.PlaneEnum.MIDDLE;
+            // TOP keeps the channel upright.
+            //
+            // Both PFCs are deliberately modelled in opposite directions. With that
+            // handedness, RIGHT puts the entire section outside the reference line,
+            // so the reference line becomes the inward web face on both sides.
+            //
+            // BEHIND keeps the section below the tread/pitch reference line.
+            beam.Position.Plane = Position.PlaneEnum.RIGHT;
             beam.Position.Depth = Position.DepthEnum.BEHIND;
             beam.Position.Rotation = Position.RotationEnum.TOP;
 
             InsertOrThrow(
                 beam,
                 name + " [profile: " + StairSettings.StringerProfile +
-                ", rotation: TOP, depth: BEHIND]");
+                ", plane: RIGHT, rotation: TOP, depth: BEHIND]");
 
             return beam;
         }
