@@ -117,3 +117,8 @@ The horizontal PL10 joining plate now matches the top footprint of the PFC: 180 
 ## Refined PFC joining plates
 
 Both the top platform/flight joint and the bottom flight/upright joint now use the same two-point PL10×70 joining-plate detail. The plate is 180 mm long, with 2 mm more trim at the upper/start end than the lower/end. Across the 75 mm PFC footprint, the 70 mm plate is pushed outward so its outside edge is flush with the PFC and 5 mm remains at the web side for welding. Each adjoining PFC is fitting-cut parallel to the joining plate, 5 mm either side of its centre plane, and the joining plate is 6 mm fillet welded to both PFCs.
+
+
+## Handrail reference
+
+Detailed handrail geometry, bend radii, fixing conventions and lessons taken from the supplied standard handrail drawings are recorded in [docs/handrail-reference/README.md](docs/handrail-reference/README.md). Use that note as the first reference when refining posts, returns, bends, joints and top-mounted PFC fixings.
