@@ -29,7 +29,7 @@ namespace BeacomStair
         public const string KickerProfile = "PL6";
         public const string TreadSidePlateProfile = "PL8";
         public const string EndPlateProfile = "PL10";
-        public const string PlatformSupportAngleProfile = "L50*50*6";
+        public const string PlatformSupportAngleProfile = "RSA50*50*6";
         public const double PlatformSupportAngleLeg = 50.0;
         public const double PlatformSupportAngleEndClearance = 10.0;
         public const string Material = "S355JR";
@@ -596,8 +596,8 @@ namespace BeacomStair
 
             Beam angle = new Beam(start, end)
             {
-                Name = "BEACOM PLATFORM SUPPORT ANGLE " + side,
-                Class = "5"
+                Name = "ANGLE",
+                Class = "16"
             };
 
             angle.Profile.ProfileString =
@@ -608,13 +608,18 @@ namespace BeacomStair
 
             angle.Position.Plane = Position.PlaneEnum.MIDDLE;
             angle.Position.Depth = Position.DepthEnum.MIDDLE;
-            angle.Position.Rotation = Position.RotationEnum.TOP;
+
+            // TOP put the horizontal leg below the support and the vertical leg
+            // on the wrong side. BELOW rotates the RSA 180 degrees within the
+            // same 50 x 50 envelope: horizontal leg directly under the landing
+            // plate, vertical leg hanging down against the PFC web.
+            angle.Position.Rotation = Position.RotationEnum.BELOW;
 
             InsertOrThrow(
                 angle,
-                angle.Name + " [" +
+                "PLATFORM SUPPORT ANGLE " + side + " [model name: ANGLE, class 16, " +
                 StairSettings.PlatformSupportAngleProfile +
-                ", 10 mm clear each end, directly below landing deck]");
+                ", rotation BELOW, 10 mm clear each end]");
 
             return angle;
         }
@@ -656,6 +661,19 @@ namespace BeacomStair
                 LocalPoint(plateX, plateY - halfWidth, centreZ + halfHeight),
                 "8");
 
+            // The back face of the PL10 is exactly on the clicked wall datum
+            // (X = 0). Fit the channel to the inside/front face at X = 10 so
+            // the PFC does not run through the end plate.
+            double plateInsideFaceX =
+                plateX + (StairSettings.BasePlateThickness / 2.0);
+
+            CreateWallEndFitting(
+                stringer,
+                plateInsideFaceX,
+                y,
+                centreZ,
+                side);
+
             CreateFilletWeld(
                 stringer,
                 wallPlate,
@@ -679,6 +697,39 @@ namespace BeacomStair
                 StairSettings.AnchorBoltSize,
                 BoltPlaneKind.Wall,
                 "WALL END PLATE " + side + " - 2 M16 ANCHORS");
+        }
+
+        private void CreateWallEndFitting(
+            Beam channel,
+            double x,
+            double y,
+            double z,
+            string side)
+        {
+            Fitting fitting = new Fitting
+            {
+                Father = channel,
+                Plane = new Tekla.Structures.Model.Plane()
+            };
+
+            fitting.Plane.Origin =
+                LocalPoint(x, y, z);
+
+            // Y-Z plane: exactly parallel to the wall/end plate.
+            fitting.Plane.AxisX = new Vector(
+                _yAxis.X,
+                _yAxis.Y,
+                _yAxis.Z);
+
+            fitting.Plane.AxisY = new Vector(
+                0.0,
+                0.0,
+                1.0);
+
+            InsertOrThrow(
+                fitting,
+                "CHANNEL " + side +
+                " FIT TO INSIDE FACE OF WALL END PLATE");
         }
 
         private void CreateBaseConnection(Beam stringer, double y, string side)
@@ -1256,8 +1307,8 @@ namespace BeacomStair
 
                 Beam plate = new Beam(localStart, localEnd)
                 {
-                    Name = name,
-                    Class = "8"
+                    Name = "PLATE",
+                    Class = "99"
                 };
 
                 plate.Profile.ProfileString =
@@ -1272,7 +1323,7 @@ namespace BeacomStair
 
                 InsertOrThrow(
                     plate,
-                    name + " [" +
+                    name + " [model name: PLATE, class 99, " +
                     StairSettings.JoiningPlateProfile +
                     ", two-point plate, Rotation TOP, outside edge flush with PFC]");
 
@@ -1337,8 +1388,8 @@ namespace BeacomStair
                 {
                     StartPoint = localBottom,
                     EndPoint = localTop,
-                    Name = name,
-                    Class = "2"
+                    Name = "CHANNEL",
+                    Class = "9"
                 };
 
                 column.Profile.ProfileString = StairSettings.StringerProfile;
@@ -1405,8 +1456,8 @@ namespace BeacomStair
 
             Beam beam = new Beam(start, end)
             {
-                Name = name,
-                Class = modelClass
+                Name = "CHANNEL",
+                Class = "9"
             };
 
             beam.Profile.ProfileString = StairSettings.StringerProfile;
@@ -1424,7 +1475,8 @@ namespace BeacomStair
 
             InsertOrThrow(
                 beam,
-                name + " [profile: " + StairSettings.StringerProfile +
+                name + " [model name: CHANNEL, class 9, profile: " +
+                StairSettings.StringerProfile +
                 ", plane: RIGHT, rotation: TOP, depth: BEHIND]");
 
             return beam;
@@ -1451,7 +1503,8 @@ namespace BeacomStair
 
             InsertOrThrow(
                 beam,
-                name + " [profile: " + profile + ", material: " + StairSettings.Material + "]");
+                name + " [model name: PLATE, class 99, profile: " + profile +
+                ", material: " + StairSettings.Material + "]");
 
             return beam;
         }
@@ -1467,8 +1520,8 @@ namespace BeacomStair
         {
             ContourPlate plate = new ContourPlate
             {
-                Name = name,
-                Class = modelClass
+                Name = "PLATE",
+                Class = "99"
             };
 
             plate.Profile.ProfileString = profile;
