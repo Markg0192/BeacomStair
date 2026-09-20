@@ -38,6 +38,8 @@ namespace BeacomStair
         public const double TreadSidePlateLength = 250.0;
         public const double TreadSidePlateHeight = 70.0;
         public const double TreadSidePlateThickness = 8.0;
+        public const double TreadSidePlateSnipeHorizontal = 75.0;
+        public const double TreadSidePlateSnipeVertical = 50.0;
         public const double TreadPlateThickness = 10.0;
         public const double TreadBoltSize = 12.0;
         public const double TreadBoltSpacing = 125.0;
@@ -468,14 +470,69 @@ namespace BeacomStair
                 ? stringerY + (sidePlateThickness / 2.0)
                 : stringerY - (sidePlateThickness / 2.0);
 
-            ContourPlate sidePlate = CreatePlate(
-                "BEACOM TREAD END PLATE " + treadNumber + (leftSide ? " L" : " R"),
-                sidePlateProfile,
-                LocalPoint(sidePlateX1, sidePlateY, sidePlateTopZ),
-                LocalPoint(sidePlateX2, sidePlateY, sidePlateTopZ),
-                LocalPoint(sidePlateX2, sidePlateY, sidePlateBottomZ),
-                LocalPoint(sidePlateX1, sidePlateY, sidePlateBottomZ),
-                "6");
+            // Snipe the uphill/top corner so the tread end plate follows the
+            // sloping PFC cleanly instead of projecting past it: 75 mm along the
+            // top edge and 50 mm down the rear edge.
+            ContourPlate sidePlate = new ContourPlate
+            {
+                Name = "PLATE",
+                Class = "99"
+            };
+
+            sidePlate.Profile.ProfileString =
+                sidePlateProfile;
+
+            sidePlate.Material.MaterialString =
+                StairSettings.Material;
+
+            sidePlate.Position.Depth =
+                Position.DepthEnum.MIDDLE;
+
+            sidePlate.AddContourPoint(
+                new ContourPoint(
+                    LocalPoint(
+                        sidePlateX1 + StairSettings.TreadSidePlateSnipeHorizontal,
+                        sidePlateY,
+                        sidePlateTopZ),
+                    null));
+
+            sidePlate.AddContourPoint(
+                new ContourPoint(
+                    LocalPoint(
+                        sidePlateX2,
+                        sidePlateY,
+                        sidePlateTopZ),
+                    null));
+
+            sidePlate.AddContourPoint(
+                new ContourPoint(
+                    LocalPoint(
+                        sidePlateX2,
+                        sidePlateY,
+                        sidePlateBottomZ),
+                    null));
+
+            sidePlate.AddContourPoint(
+                new ContourPoint(
+                    LocalPoint(
+                        sidePlateX1,
+                        sidePlateY,
+                        sidePlateBottomZ),
+                    null));
+
+            sidePlate.AddContourPoint(
+                new ContourPoint(
+                    LocalPoint(
+                        sidePlateX1,
+                        sidePlateY,
+                        sidePlateTopZ - StairSettings.TreadSidePlateSnipeVertical),
+                    null));
+
+            InsertOrThrow(
+                sidePlate,
+                "TREAD " + treadNumber +
+                (leftSide ? " LEFT" : " RIGHT") +
+                " END PLATE [75 HORIZONTAL / 50 VERTICAL SNIPE]");
 
             CreateFilletWeld(
                 tread,
