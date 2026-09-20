@@ -72,8 +72,9 @@ The Tekla generator now follows the 33.7 mm reference family directly:
 
 - CHS33.7 x 3.2 posts, top rail and midrail.
 - R82 centre-line geometry for the bottom D-return.
-- 2 x M16 site bolts at 100 mm centres to each top-mounted post base.
+- Landing post bases use 2 x M16 site bolts at 100 mm centres, matching the supplied top-mounted reference detail.
 - 160 x 70 x 10 post base plates.
-- Sloping post bases are asymmetric around the vertical CHS: 90 mm uphill and 70 mm downhill, with bolt centres 60 mm uphill and 40 mm downhill.
+- Sloping post bases are asymmetric around the vertical CHS: 90 mm uphill and 70 mm downhill. Their bolt centres are widened slightly to 65 mm uphill and 45 mm downhill = 110 mm centres, leaving 25 mm end distance and better clearance around the CHS.
+- Vertical CHS posts on the flight are fitting-cut to the exact plane of the sloping PL10 base plate so the tube bears cleanly on the plate rather than ending square across an incline.
 - Two posts on the 1000 mm top landing.
 - Flight post spacing remains about 1000 mm, comfortably within the 1500 mm maximum spacing shown on the reference platform-handholding detail.
