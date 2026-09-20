@@ -49,9 +49,9 @@ namespace BeacomStair
 
         // Top and bottom connections.
         public const double WallPlateWidth = 70.0;
-        public const double WallPlateHeight = 160.0;
+        public const double WallPlateHeight = 170.0;
         // Base plate is deliberately kept fully inside the PFC footprint.
-        public const double BasePlateLength = 160.0;
+        public const double BasePlateLength = 170.0;
         public const double BasePlateWidth = 70.0;
         public const double BasePlateThickness = 10.0;
         public const double StringerJointPlateThickness = 10.0;
@@ -630,8 +630,8 @@ namespace BeacomStair
             double halfHeight = StairSettings.WallPlateHeight / 2.0;
 
             // The platform PFC top is 10 mm below finished landing level because
-            // the PL10 deck finishes exactly at 3170. Keep the 160 mm end plate
-            // wholly within the 180 mm PFC depth: 10 mm clear top and bottom.
+            // the PL10 deck finishes exactly at 3170. Keep the 170 mm end plate
+            // wholly within the 180 mm PFC depth: 5 mm clear top and bottom.
             double stringerTopZ =
                 StairSettings.TotalRise - StairSettings.TreadPlateThickness;
 
@@ -737,8 +737,8 @@ namespace BeacomStair
             double halfLength = StairSettings.BasePlateLength / 2.0;
             double halfWidth = StairSettings.BasePlateWidth / 2.0;
 
-            // Keep the 160 mm plate length wholly inside the 180 mm PFC depth:
-            // 10 mm clearance at each end.
+            // Keep the 170 mm plate length wholly inside the 180 mm PFC depth:
+            // 5 mm clearance at each end.
             double x =
                 StairSettings.OverallLength - (StairSettings.StringerDepth / 2.0);
 
