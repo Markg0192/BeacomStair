@@ -36,10 +36,10 @@ The supplied bend/return drawing gives the following centreline bend radii:
 | 32 mm | **42.4 mm** | **130.0 mm** | **47.8 mm** |
 | 40 mm | 48.3 mm | 155.0 mm | 57.2 mm |
 
-BeacomStair currently uses **CHS42.4 x 3.2**, so the relevant reference geometry is:
+BeacomStair now uses **CHS33.7 x 3.2**, matching the typical handrail size explicitly shown on the supplied detail. The relevant reference geometry is:
 
-- **130 mm centreline radius** for a smooth formed/bent 90-degree corner.
-- **47.8 mm centreline radius** where a proprietary/welded 90-degree elbow is used instead.
+- **82 mm centreline radius** for a smooth formed/bent 90-degree corner.
+- **38.1 mm centreline radius** where a 90-degree welded elbow is used instead.
 - Prefer smooth bent/returned rail geometry over square mitres where practical.
 - A typical handrail end is shown as a continuous D/U-shaped return, formed with bends at both the top and lower rail.
 - A stair-well return is shown using a combination of smooth formed tube and welded bends.
@@ -50,17 +50,30 @@ BeacomStair currently uses **CHS42.4 x 3.2**, so the relevant reference geometry
 
 For future handrail work on this model:
 
-1. Keep **CHS42.4 x 3.2** for the posts, top rail and midrail unless deliberately changed.
-2. Treat **R130 on the tube centreline** as the preferred smooth-bend radius for CHS42.4.
+1. Use **CHS33.7 x 3.2** for the posts, top rail and midrail unless deliberately changed.
+2. Treat **R82 on the tube centreline** as the preferred smooth-bend radius for CHS33.7.
 3. Use a proper continuous **D-return at the bottom of the flight**; do not leave the top and mid rails as two open tube ends.
 4. Keep rail transitions smooth through the top of the flight and avoid unnecessary joints near bends.
 5. Keep handrail/post spacing comfortably below the **1500 mm maximum** shown on the reference drawing; the current approximately 1 m spacing is conservative relative to that detail.
 6. Keep posts close enough to corners/returns that the unsupported handrail length does not become excessive.
 7. Where possible, place post bases on the **centre of the PFC top flange**, with accessible site bolts and enough clearance around the vertical CHS for spanners/drilling.
 8. On sloping PFCs, account for the fact that a **vertical post intersects an inclined base plate asymmetrically**; do not blindly centre the plate/bolts around the post.
-9. Prefer a two-bolt top-mounted fixing philosophy. The reference detail uses **M16 at 100 mm centres**; BeacomStair can use that as a benchmark when refining the current post-base detail.
+9. Use the reference two-bolt top-mounted fixing philosophy: **2 x M16 grade 8.8 at 100 mm centres** through the PFC top flange, with accessible edge/tool clearance.
 10. Keep all rail/post welds and fixing details buildable and inspectable; do not let bolts clash with the CHS post or PFC toes/web.
 
 ## Current project-specific caveat
 
 The supplied reference is an industrial/platform handrail standard detail. BeacomStair is being developed for a low-use private workshop stair in a domestic garage. The drawing is therefore a **fabrication/detailing reference**, not automatic proof that the stair should adopt every BS EN ISO 14122 dimension such as the 1100 mm platform guard height. Regulatory dimensions should remain aligned with the agreed project use and final Building Control/design requirements.
+
+
+## Current 33.7 mm implementation
+
+The Tekla generator now follows the 33.7 mm reference family directly:
+
+- CHS33.7 x 3.2 posts, top rail and midrail.
+- R82 centre-line geometry for the bottom D-return.
+- 2 x M16 site bolts at 100 mm centres to each top-mounted post base.
+- 160 x 70 x 10 post base plates.
+- Sloping post bases are asymmetric around the vertical CHS: 90 mm uphill and 70 mm downhill, with bolt centres 60 mm uphill and 40 mm downhill.
+- Two posts on the 1000 mm top landing.
+- Flight post spacing remains about 1000 mm, comfortably within the 1500 mm maximum spacing shown on the reference platform-handholding detail.
