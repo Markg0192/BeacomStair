@@ -89,14 +89,28 @@ namespace BeacomStair
 
         // Handrail posts are shop-welded to PL10 footplates and site-bolted
         // through the top flange of the PFC stringers.
-        public const double HandrailPostBaseLength = 100.0;
+        public const double HandrailPostBaseLength = 120.0;
         public const double HandrailPostBaseWidth = 70.0;
         public const double HandrailPostBaseThickness = 10.0;
-        public const double HandrailPostBoltSpacing = 60.0;
+        public const double HandrailPostBoltSpacing = 80.0;
         public const double HandrailPostBoltSize = 12.0;
-        public const double PlatformPostEndOffset = 100.0;
+
+        // Landing: two posts only, with wider-spread M12s.
+        public const double PlatformPostEndOffset = 150.0;
+
+        // Sloping post footplates are intentionally asymmetric about the vertical
+        // CHS post to create proper tool/bolt clearance on the uphill side.
+        public const double FlightPostBaseUphill = 70.0;
+        public const double FlightPostBaseDownhill = 50.0;
+        public const double FlightPostUphillBoltOffset = 50.0;
+        public const double FlightPostDownhillBoltOffset = 30.0;
+
         public const double FlightPostEndOffset = 250.0;
         public const double FlightPostSpacing = 1000.0;
+
+        // Rounded D-return closing the two rails at the bottom of the flight.
+        public const double HandrailReturnProjection = 120.0;
+        public const double HandrailReturnCornerOffset = 80.0;
 
         public static double Rise
         {
@@ -919,14 +933,25 @@ namespace BeacomStair
                 stairMidRail,
                 "HANDRAIL " + side + " MID LANDING/FLIGHT JOINT");
 
-            // Three neat posts on the 1000 mm landing: 100 / 500 / 900.
-            double platformMiddleX =
-                StairSettings.PlatformLength / 2.0;
+            PolyBeam bottomReturn = CreateHandrailBottomReturn(
+                y,
+                side);
 
+            CreateFilletWeld(
+                stairTopRail,
+                bottomReturn,
+                "HANDRAIL " + side + " TOP RAIL TO D-RETURN");
+
+            CreateFilletWeld(
+                stairMidRail,
+                bottomReturn,
+                "HANDRAIL " + side + " MID RAIL TO D-RETURN");
+
+            // Two posts are enough on the 1000 mm landing. Keeping them
+            // 150 mm in from each end gives a clean 700 mm clear spacing.
             double[] platformPostXs =
             {
                 StairSettings.PlatformPostEndOffset,
-                platformMiddleX,
                 StairSettings.PlatformLength - StairSettings.PlatformPostEndOffset
             };
 
@@ -1048,8 +1073,7 @@ namespace BeacomStair
             double lengthFactor =
                 Math.Sqrt(1.0 + (slope * slope));
 
-            // Unit vector along the descending PFC and the upward normal to its
-            // top flange in the stair side plane.
+            // +tangent runs downhill; -tangent runs uphill.
             double tangentX =
                 1.0 / lengthFactor;
 
@@ -1068,70 +1092,82 @@ namespace BeacomStair
             double halfPlateThickness =
                 StairSettings.HandrailPostBaseThickness / 2.0;
 
-            double plateCentreX =
+            // Mid-plane point directly below the vertical CHS post.
+            double plateAtPostX =
                 nominalX + (normalX * halfPlateThickness);
 
-            double plateCentreZ =
+            double plateAtPostZ =
                 pfcTopZ + (normalZ * halfPlateThickness);
-
-            double halfLength =
-                StairSettings.HandrailPostBaseLength / 2.0;
 
             double halfWidth =
                 StairSettings.HandrailPostBaseWidth / 2.0;
 
-            double xBack =
-                plateCentreX - (tangentX * halfLength);
+            // Because the CHS post is vertical while the plate slopes, give the
+            // uphill end extra length. This puts the post deliberately off-centre
+            // on the 120 mm plate: 70 mm uphill / 50 mm downhill.
+            double uphillX =
+                plateAtPostX -
+                (tangentX * StairSettings.FlightPostBaseUphill);
 
-            double zBack =
-                plateCentreZ - (tangentZ * halfLength);
+            double uphillZ =
+                plateAtPostZ -
+                (tangentZ * StairSettings.FlightPostBaseUphill);
 
-            double xFront =
-                plateCentreX + (tangentX * halfLength);
+            double downhillX =
+                plateAtPostX +
+                (tangentX * StairSettings.FlightPostBaseDownhill);
 
-            double zFront =
-                plateCentreZ + (tangentZ * halfLength);
+            double downhillZ =
+                plateAtPostZ +
+                (tangentZ * StairSettings.FlightPostBaseDownhill);
 
             ContourPlate footPlate = CreatePlate(
                 "HANDRAIL POST BASE " + side,
                 StairSettings.EndPlateProfile,
-                LocalPoint(xBack, y - halfWidth, zBack),
-                LocalPoint(xFront, y - halfWidth, zFront),
-                LocalPoint(xFront, y + halfWidth, zFront),
-                LocalPoint(xBack, y + halfWidth, zBack),
+                LocalPoint(uphillX, y - halfWidth, uphillZ),
+                LocalPoint(downhillX, y - halfWidth, downhillZ),
+                LocalPoint(downhillX, y + halfWidth, downhillZ),
+                LocalPoint(uphillX, y + halfWidth, uphillZ),
                 "99");
 
-            double halfBoltSpacing =
-                StairSettings.HandrailPostBoltSpacing / 2.0;
-
-            Point firstBolt = LocalPoint(
-                plateCentreX - (tangentX * halfBoltSpacing),
+            // Push the top/uphill bolt farther away from the vertical CHS post.
+            // The bolt centres are now 50 mm uphill and 30 mm downhill = 80 mm c/c.
+            Point uphillBolt = LocalPoint(
+                plateAtPostX -
+                    (tangentX * StairSettings.FlightPostUphillBoltOffset),
                 y,
-                plateCentreZ - (tangentZ * halfBoltSpacing));
+                plateAtPostZ -
+                    (tangentZ * StairSettings.FlightPostUphillBoltOffset));
 
-            Point secondBolt = LocalPoint(
-                plateCentreX + (tangentX * halfBoltSpacing),
+            Point downhillBolt = LocalPoint(
+                plateAtPostX +
+                    (tangentX * StairSettings.FlightPostDownhillBoltOffset),
                 y,
-                plateCentreZ + (tangentZ * halfBoltSpacing));
+                plateAtPostZ +
+                    (tangentZ * StairSettings.FlightPostDownhillBoltOffset));
 
             CreateTwoBoltArray(
                 footPlate,
                 flightStringer,
-                firstBolt,
-                secondBolt,
+                uphillBolt,
+                downhillBolt,
                 StairSettings.HandrailPostBoltSize,
                 BoltPlaneKind.StringerTop,
-                "HANDRAIL POST BASE " + side + " - 2 M12 TO FLIGHT CHANNEL");
+                "HANDRAIL POST BASE " + side +
+                " - 2 M12 TO FLIGHT CHANNEL, UPHILL BOLT EXTENDED");
 
             // Start the vertical CHS on the top face of the sloping PL10 footplate.
             double postX =
-                nominalX + (normalX * StairSettings.HandrailPostBaseThickness);
+                nominalX +
+                (normalX * StairSettings.HandrailPostBaseThickness);
 
             double postBaseZ =
-                pfcTopZ + (normalZ * StairSettings.HandrailPostBaseThickness);
+                pfcTopZ +
+                (normalZ * StairSettings.HandrailPostBaseThickness);
 
             double postTopZ =
-                FlightPitchZ(postX) + StairSettings.StairHandrailHeight;
+                FlightPitchZ(postX) +
+                StairSettings.StairHandrailHeight;
 
             Beam post = CreateBeam(
                 "HANDRAIL",
@@ -1146,6 +1182,91 @@ namespace BeacomStair
                 "HANDRAIL POST " + side + " TO SLOPING BASE PLATE");
 
             return post;
+        }
+
+        private PolyBeam CreateHandrailBottomReturn(
+            double y,
+            string side)
+        {
+            double topZ =
+                StairSettings.Rise + StairSettings.StairHandrailHeight;
+
+            double midZ =
+                StairSettings.Rise + StairSettings.MidRailHeight;
+
+            double frontX =
+                StairSettings.OverallLength +
+                StairSettings.HandrailReturnProjection;
+
+            // One continuous CHS polybeam closes the top and mid rails. Rounded
+            // chamfers at the two forward corners give the end a proper D-return
+            // rather than a square vertical bar or two open rail ends.
+            PolyBeam returnRail =
+                new PolyBeam(PolyBeam.PolyBeamTypeEnum.BEAM)
+                {
+                    Name = "HANDRAIL",
+                    Class = "7"
+                };
+
+            returnRail.Profile.ProfileString =
+                StairSettings.RailProfile;
+
+            returnRail.Material.MaterialString =
+                StairSettings.Material;
+
+            returnRail.Position.Plane =
+                Position.PlaneEnum.MIDDLE;
+
+            returnRail.Position.Depth =
+                Position.DepthEnum.MIDDLE;
+
+            returnRail.Position.Rotation =
+                Position.RotationEnum.TOP;
+
+            returnRail.AddContourPoint(
+                new ContourPoint(
+                    LocalPoint(
+                        StairSettings.OverallLength,
+                        y,
+                        topZ),
+                    null));
+
+            returnRail.AddContourPoint(
+                new ContourPoint(
+                    LocalPoint(
+                        frontX,
+                        y,
+                        topZ - StairSettings.HandrailReturnCornerOffset),
+                    new Chamfer(
+                        StairSettings.HandrailReturnCornerOffset,
+                        StairSettings.HandrailReturnCornerOffset,
+                        Chamfer.ChamferTypeEnum.CHAMFER_ROUNDING)));
+
+            returnRail.AddContourPoint(
+                new ContourPoint(
+                    LocalPoint(
+                        frontX,
+                        y,
+                        midZ + StairSettings.HandrailReturnCornerOffset),
+                    new Chamfer(
+                        StairSettings.HandrailReturnCornerOffset,
+                        StairSettings.HandrailReturnCornerOffset,
+                        Chamfer.ChamferTypeEnum.CHAMFER_ROUNDING)));
+
+            returnRail.AddContourPoint(
+                new ContourPoint(
+                    LocalPoint(
+                        StairSettings.OverallLength,
+                        y,
+                        midZ),
+                    null));
+
+            InsertOrThrow(
+                returnRail,
+                "HANDRAIL " + side +
+                " BOTTOM D-RETURN [CHS42.4, rounded polybeam]");
+
+            return returnRail;
         }
 
         private double FlightPitchZ(double x)
