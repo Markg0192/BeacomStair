@@ -106,11 +106,12 @@ namespace BeacomStair
 
         // Sloping post footplates remain deliberately asymmetric about the
         // vertical CHS post. The plate is 160 long: 90 uphill / 70 downhill.
-        // M16 centres are 60 uphill / 40 downhill = 100 mm c/c.
+        // Widen the flight-only M16 centres slightly for better CHS clearance:
+        // 65 uphill / 45 downhill = 110 mm c/c, leaving 25 mm end distance.
         public const double FlightPostBaseUphill = 90.0;
         public const double FlightPostBaseDownhill = 70.0;
-        public const double FlightPostUphillBoltOffset = 60.0;
-        public const double FlightPostDownhillBoltOffset = 40.0;
+        public const double FlightPostUphillBoltOffset = 65.0;
+        public const double FlightPostDownhillBoltOffset = 45.0;
 
         public const double FlightPostEndOffset = 250.0;
         public const double FlightPostSpacing = 1000.0;
@@ -1141,9 +1142,9 @@ namespace BeacomStair
                 LocalPoint(uphillX, y + halfWidth, uphillZ),
                 "99");
 
-            // Push the top/uphill bolt farther away from the vertical CHS post.
-            // The reference top-mounted handrail detail uses M16 at 100 mm c/c,
-            // so use 60 mm uphill and 40 mm downhill around the post line.
+            // Push both flight bolts slightly farther away from the vertical CHS.
+            // 65 mm uphill / 45 mm downhill gives 110 mm c/c while retaining
+            // 25 mm from each bolt centre to the end of the 160 mm plate.
             Point uphillBolt = LocalPoint(
                 plateAtPostX -
                     (tangentX * StairSettings.FlightPostUphillBoltOffset),
@@ -1166,7 +1167,7 @@ namespace BeacomStair
                 StairSettings.HandrailPostBoltSize,
                 BoltPlaneKind.StringerTop,
                 "HANDRAIL POST BASE " + side +
-                " - 2 M16 @ 100 C/C TO FLIGHT CHANNEL, UPHILL BOLT EXTENDED");
+                " - 2 M16 @ 110 C/C TO FLIGHT CHANNEL");
 
             // Start the vertical CHS on the top face of the sloping PL10 footplate.
             double postX =
@@ -1181,12 +1182,25 @@ namespace BeacomStair
                 FlightPitchZ(postX) +
                 StairSettings.StairHandrailHeight;
 
+            Point postBasePoint =
+                LocalPoint(postX, y, postBaseZ);
+
             Beam post = CreateBeam(
                 "HANDRAIL",
                 StairSettings.RailProfile,
-                LocalPoint(postX, y, postBaseZ),
+                postBasePoint,
                 LocalPoint(postX, y, postTopZ),
                 "7");
+
+            // A vertical CHS has a square end by default, which does not sit
+            // correctly on an inclined footplate. Fit the bottom of the post to
+            // the exact top-face plane of the sloping PL10 base plate.
+            CreateSlopingPostBaseFitting(
+                post,
+                postBasePoint,
+                tangentX,
+                tangentZ,
+                side);
 
             CreateFilletWeld(
                 footPlate,
@@ -1194,6 +1208,40 @@ namespace BeacomStair
                 "HANDRAIL POST " + side + " TO SLOPING BASE PLATE");
 
             return post;
+        }
+
+        private void CreateSlopingPostBaseFitting(
+            Beam post,
+            Point plateTopPoint,
+            double tangentX,
+            double tangentZ,
+            string side)
+        {
+            // Plane follows the sloping footplate top face:
+            // one axis across the stair, the other along the flight pitch.
+            Fitting fitting = new Fitting
+            {
+                Father = post,
+                Plane = new Tekla.Structures.Model.Plane()
+            };
+
+            fitting.Plane.Origin =
+                plateTopPoint;
+
+            fitting.Plane.AxisX = new Vector(
+                _yAxis.X,
+                _yAxis.Y,
+                0.0);
+
+            fitting.Plane.AxisY = new Vector(
+                (_xAxis.X * tangentX),
+                (_xAxis.Y * tangentX),
+                tangentZ);
+
+            InsertOrThrow(
+                fitting,
+                "HANDRAIL POST " + side +
+                " FIT TO SLOPING BASE-PLATE TOP FACE");
         }
 
         private PolyBeam CreateHandrailBottomReturn(
