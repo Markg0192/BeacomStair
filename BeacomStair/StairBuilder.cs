@@ -81,36 +81,47 @@ namespace BeacomStair
         public const double FilletWeldSize = 6.0;
 
         // Guarding.
-        public const double HandrailOutsideDiameter = 42.4;
+        //
+        // The supplied standard handrail details use 25 mm nominal-bore tube,
+        // 33.7 mm outside diameter, with an 82 mm centre-line radius for formed
+        // bends. Use that fabrication system consistently through posts, rails
+        // and returns.
+        public const double HandrailOutsideDiameter = 33.7;
         public const double StairHandrailHeight = 900.0;
         public const double PlatformGuardHeight = 900.0;
         public const double MidRailHeight = 550.0;
-        public const string RailProfile = "CHS42.4*3.2";
+        public const string RailProfile = "CHS33.7*3.2";
 
         // Handrail posts are shop-welded to PL10 footplates and site-bolted
-        // through the top flange of the PFC stringers.
-        public const double HandrailPostBaseLength = 120.0;
+        // through the top flange of the PFC stringers. The supplied top-mounted
+        // standard detail uses 2-M16 at 100 mm centres, so use that as our guide.
+        public const double HandrailPostBaseLength = 160.0;
         public const double HandrailPostBaseWidth = 70.0;
         public const double HandrailPostBaseThickness = 10.0;
-        public const double HandrailPostBoltSpacing = 80.0;
-        public const double HandrailPostBoltSize = 12.0;
+        public const double HandrailPostBoltSpacing = 100.0;
+        public const double HandrailPostBoltSize = 16.0;
 
-        // Landing: two posts only, with wider-spread M12s.
+        // Landing: two posts only.
         public const double PlatformPostEndOffset = 150.0;
 
-        // Sloping post footplates are intentionally asymmetric about the vertical
-        // CHS post to create proper tool/bolt clearance on the uphill side.
-        public const double FlightPostBaseUphill = 70.0;
-        public const double FlightPostBaseDownhill = 50.0;
-        public const double FlightPostUphillBoltOffset = 50.0;
-        public const double FlightPostDownhillBoltOffset = 30.0;
+        // Sloping post footplates remain deliberately asymmetric about the
+        // vertical CHS post. The plate is 160 long: 90 uphill / 70 downhill.
+        // M16 centres are 60 uphill / 40 downhill = 100 mm c/c.
+        public const double FlightPostBaseUphill = 90.0;
+        public const double FlightPostBaseDownhill = 70.0;
+        public const double FlightPostUphillBoltOffset = 60.0;
+        public const double FlightPostDownhillBoltOffset = 40.0;
 
         public const double FlightPostEndOffset = 250.0;
         public const double FlightPostSpacing = 1000.0;
+        public const double HandrailReferenceMaxPostSpacing = 1500.0;
 
-        // Rounded D-return closing the two rails at the bottom of the flight.
-        public const double HandrailReturnProjection = 120.0;
-        public const double HandrailReturnCornerOffset = 80.0;
+        // 33.7 OD reference bend data:
+        // formed bend R82 on centre line; 90-degree welded elbow R38.1.
+        public const double HandrailReturnBendRadius = 82.0;
+        public const double HandrailWeldedElbowRadius = 38.1;
+        public const double HandrailReturnProjection = 164.0;
+        public const double HandrailReturnCornerOffset = 82.0;
 
         public static double Rise
         {
@@ -1041,7 +1052,7 @@ namespace BeacomStair
                 LocalPoint(x + halfBoltSpacing, y, plateCentreZ),
                 StairSettings.HandrailPostBoltSize,
                 BoltPlaneKind.Horizontal,
-                "HANDRAIL POST BASE " + side + " - 2 M12 TO PLATFORM CHANNEL");
+                "HANDRAIL POST BASE " + side + " - 2 M16 @ 100 C/C TO PLATFORM CHANNEL");
 
             double postBaseZ =
                 pfcTopZ + StairSettings.HandrailPostBaseThickness;
@@ -1104,7 +1115,7 @@ namespace BeacomStair
 
             // Because the CHS post is vertical while the plate slopes, give the
             // uphill end extra length. This puts the post deliberately off-centre
-            // on the 120 mm plate: 70 mm uphill / 50 mm downhill.
+            // on the 160 mm plate: 90 mm uphill / 70 mm downhill.
             double uphillX =
                 plateAtPostX -
                 (tangentX * StairSettings.FlightPostBaseUphill);
@@ -1131,7 +1142,8 @@ namespace BeacomStair
                 "99");
 
             // Push the top/uphill bolt farther away from the vertical CHS post.
-            // The bolt centres are now 50 mm uphill and 30 mm downhill = 80 mm c/c.
+            // The reference top-mounted handrail detail uses M16 at 100 mm c/c,
+            // so use 60 mm uphill and 40 mm downhill around the post line.
             Point uphillBolt = LocalPoint(
                 plateAtPostX -
                     (tangentX * StairSettings.FlightPostUphillBoltOffset),
@@ -1154,7 +1166,7 @@ namespace BeacomStair
                 StairSettings.HandrailPostBoltSize,
                 BoltPlaneKind.StringerTop,
                 "HANDRAIL POST BASE " + side +
-                " - 2 M12 TO FLIGHT CHANNEL, UPHILL BOLT EXTENDED");
+                " - 2 M16 @ 100 C/C TO FLIGHT CHANNEL, UPHILL BOLT EXTENDED");
 
             // Start the vertical CHS on the top face of the sloping PL10 footplate.
             double postX =
@@ -1198,9 +1210,9 @@ namespace BeacomStair
                 StairSettings.OverallLength +
                 StairSettings.HandrailReturnProjection;
 
-            // One continuous CHS polybeam closes the top and mid rails. Rounded
-            // chamfers at the two forward corners give the end a proper D-return
-            // rather than a square vertical bar or two open rail ends.
+            // One continuous CHS33.7 polybeam closes the top and mid rails.
+            // The supplied standard detail uses an R82 centre-line formed bend
+            // for 33.7 OD tube, so use that radius at both D-return corners.
             PolyBeam returnRail =
                 new PolyBeam(PolyBeam.PolyBeamTypeEnum.BEAM)
                 {
@@ -1264,7 +1276,7 @@ namespace BeacomStair
             InsertOrThrow(
                 returnRail,
                 "HANDRAIL " + side +
-                " BOTTOM D-RETURN [CHS42.4, rounded polybeam]");
+                " BOTTOM D-RETURN [CHS33.7, R82 centre-line bends]");
 
             return returnRail;
         }
