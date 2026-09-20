@@ -52,7 +52,9 @@ namespace BeacomStair
         public const double WallPlateHeight = 170.0;
         // Base plate is deliberately kept fully inside the PFC footprint.
         public const double BasePlateLength = 170.0;
-        public const double BasePlateWidth = 70.0;
+        public const double BasePlateInsideProjection = 80.0;
+        public const double BasePlateWidth = StringerWidth + BasePlateInsideProjection;
+        public const double BasePlateAnchorInsetFromWeb = 45.0;
         public const double BasePlateThickness = 10.0;
         public const double StringerJointPlateThickness = 10.0;
         public const string JoiningPlateProfile = "PL10*70";
@@ -734,21 +736,37 @@ namespace BeacomStair
 
         private void CreateBaseConnection(Beam stringer, double y, string side)
         {
-            double halfLength = StairSettings.BasePlateLength / 2.0;
-            double halfWidth = StairSettings.BasePlateWidth / 2.0;
+            double halfLength =
+                StairSettings.BasePlateLength / 2.0;
 
-            // Keep the 170 mm plate length wholly inside the 180 mm PFC depth:
-            // 5 mm clearance at each end.
+            // Keep the 170 mm plate length within the 180 mm PFC depth:
+            // 5 mm clear at each end.
             double x =
-                StairSettings.OverallLength - (StairSettings.StringerDepth / 2.0);
+                StairSettings.OverallLength -
+                (StairSettings.StringerDepth / 2.0);
 
-            // Apply exactly the same transverse positioning rule as the PL10x70
-            // joining plates. The outside edge of the 70 mm base plate is flush
-            // with the outside of the 75 mm PFC footprint, leaving 5 mm clear at
-            // the web side for the 6 mm fillet weld.
-            bool leftSide = y < 0.0;
-            double plateY =
-                GetJoiningPlateCentreY(y, leftSide);
+            bool leftSide =
+                y < 0.0;
+
+            // The base plate now covers the full 75 mm PFC footprint and then
+            // projects 80 mm inward into the clear stair width for site drilling.
+            //
+            // The PFC reference line is its inward web face:
+            // left side  -> channel footprint runs toward -Y, clear stair is +Y
+            // right side -> channel footprint runs toward +Y, clear stair is -Y
+            double outsideY = leftSide
+                ? y - StairSettings.StringerWidth
+                : y + StairSettings.StringerWidth;
+
+            double insideY = leftSide
+                ? y + StairSettings.BasePlateInsideProjection
+                : y - StairSettings.BasePlateInsideProjection;
+
+            double minY =
+                Math.Min(outsideY, insideY);
+
+            double maxY =
+                Math.Max(outsideY, insideY);
 
             double basePlateZ =
                 StairSettings.BasePlateThickness / 2.0;
@@ -756,10 +774,10 @@ namespace BeacomStair
             ContourPlate basePlate = CreatePlate(
                 "BEACOM BASE PLATE " + side,
                 StairSettings.EndPlateProfile,
-                LocalPoint(x - halfLength, plateY - halfWidth, basePlateZ),
-                LocalPoint(x + halfLength, plateY - halfWidth, basePlateZ),
-                LocalPoint(x + halfLength, plateY + halfWidth, basePlateZ),
-                LocalPoint(x - halfLength, plateY + halfWidth, basePlateZ),
+                LocalPoint(x - halfLength, minY, basePlateZ),
+                LocalPoint(x + halfLength, minY, basePlateZ),
+                LocalPoint(x + halfLength, maxY, basePlateZ),
+                LocalPoint(x - halfLength, maxY, basePlateZ),
                 "8");
 
             CreateFilletWeld(
@@ -767,14 +785,22 @@ namespace BeacomStair
                 basePlate,
                 "BASE PLATE " + side + " TO PFC");
 
+            // Put both M16 anchors on the clear inward projection so the stringer
+            // can be erected first and drilled straight down before the bottom
+            // tread is installed. The anchor line is 45 mm inside the PFC web,
+            // leaving 35 mm to the free edge of the 80 mm projection.
+            double anchorY = leftSide
+                ? y + StairSettings.BasePlateAnchorInsetFromWeb
+                : y - StairSettings.BasePlateAnchorInsetFromWeb;
+
             Point firstBolt = LocalPoint(
                 x - (StairSettings.BaseAnchorBoltSpacing / 2.0),
-                plateY,
+                anchorY,
                 basePlateZ);
 
             Point secondBolt = LocalPoint(
                 x + (StairSettings.BaseAnchorBoltSpacing / 2.0),
-                plateY,
+                anchorY,
                 basePlateZ);
 
             CreateTwoBoltArray(
@@ -784,7 +810,8 @@ namespace BeacomStair
                 secondBolt,
                 StairSettings.AnchorBoltSize,
                 BoltPlaneKind.Horizontal,
-                "BASE PLATE " + side + " - 2 M16 ANCHORS");
+                "BASE PLATE " + side +
+                " - 2 M16 SITE-DRILL ANCHORS ON INWARD PROJECTION");
         }
 
         private void CreateGuarding(PlatformParts platform, FlightParts flight)
