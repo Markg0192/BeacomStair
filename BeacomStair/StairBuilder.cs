@@ -470,9 +470,9 @@ namespace BeacomStair
                 ? stringerY + (sidePlateThickness / 2.0)
                 : stringerY - (sidePlateThickness / 2.0);
 
-            // Snipe the uphill/top corner so the tread end plate follows the
+            // Snipe the uphill/bottom corner so the tread end plate follows the
             // sloping PFC cleanly instead of projecting past it: 75 mm along the
-            // top edge and 50 mm down the rear edge.
+            // bottom edge and 50 mm up the rear edge.
             ContourPlate sidePlate = new ContourPlate
             {
                 Name = "PLATE",
@@ -491,24 +491,32 @@ namespace BeacomStair
             sidePlate.AddContourPoint(
                 new ContourPoint(
                     LocalPoint(
+                        sidePlateX1,
+                        sidePlateY,
+                        sidePlateTopZ),
+                    null));
+
+            sidePlate.AddContourPoint(
+                new ContourPoint(
+                    LocalPoint(
+                        sidePlateX2,
+                        sidePlateY,
+                        sidePlateTopZ),
+                    null));
+
+            sidePlate.AddContourPoint(
+                new ContourPoint(
+                    LocalPoint(
+                        sidePlateX2,
+                        sidePlateY,
+                        sidePlateBottomZ),
+                    null));
+
+            sidePlate.AddContourPoint(
+                new ContourPoint(
+                    LocalPoint(
                         sidePlateX1 + StairSettings.TreadSidePlateSnipeHorizontal,
                         sidePlateY,
-                        sidePlateTopZ),
-                    null));
-
-            sidePlate.AddContourPoint(
-                new ContourPoint(
-                    LocalPoint(
-                        sidePlateX2,
-                        sidePlateY,
-                        sidePlateTopZ),
-                    null));
-
-            sidePlate.AddContourPoint(
-                new ContourPoint(
-                    LocalPoint(
-                        sidePlateX2,
-                        sidePlateY,
                         sidePlateBottomZ),
                     null));
 
@@ -517,15 +525,7 @@ namespace BeacomStair
                     LocalPoint(
                         sidePlateX1,
                         sidePlateY,
-                        sidePlateBottomZ),
-                    null));
-
-            sidePlate.AddContourPoint(
-                new ContourPoint(
-                    LocalPoint(
-                        sidePlateX1,
-                        sidePlateY,
-                        sidePlateTopZ - StairSettings.TreadSidePlateSnipeVertical),
+                        sidePlateBottomZ + StairSettings.TreadSidePlateSnipeVertical),
                     null));
 
             InsertOrThrow(
