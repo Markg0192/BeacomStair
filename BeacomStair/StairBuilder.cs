@@ -1821,19 +1821,6 @@ namespace BeacomStair
                         planeAxisY = globalYAxis;
                         break;
 
-                    case BoltPlaneKind.StringerTop:
-                        // Plane of the sloping PFC top flange. The bolt axis is
-                        // normal to the flange/footplate rather than vertical.
-                        planeAxisX = ToGlobalVector(
-                            new V3(
-                                1.0,
-                                0.0,
-                                -(StairSettings.Rise / StairSettings.Going)),
-                            originalPlane);
-
-                        planeAxisY = globalYAxis;
-                        break;
-
                     case BoltPlaneKind.Wall:
                         // Y-Z wall plane. Bolt axis runs into the wall.
                         planeAxisX = globalYAxis;
