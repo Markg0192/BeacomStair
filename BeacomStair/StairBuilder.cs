@@ -83,9 +83,20 @@ namespace BeacomStair
         // Guarding.
         public const double HandrailOutsideDiameter = 42.4;
         public const double StairHandrailHeight = 900.0;
-        public const double PlatformGuardHeight = 1100.0;
+        public const double PlatformGuardHeight = 900.0;
         public const double MidRailHeight = 550.0;
         public const string RailProfile = "CHS42.4*3.2";
+
+        // Handrail posts are shop-welded to PL10 footplates and site-bolted
+        // through the top flange of the PFC stringers.
+        public const double HandrailPostBaseLength = 100.0;
+        public const double HandrailPostBaseWidth = 70.0;
+        public const double HandrailPostBaseThickness = 10.0;
+        public const double HandrailPostBoltSpacing = 60.0;
+        public const double HandrailPostBoltSize = 12.0;
+        public const double PlatformPostEndOffset = 100.0;
+        public const double FlightPostEndOffset = 250.0;
+        public const double FlightPostSpacing = 1000.0;
 
         public static double Rise
         {
@@ -110,6 +121,7 @@ namespace BeacomStair
         {
             Horizontal,
             StairSide,
+            StringerTop,
             Wall
         }
 
@@ -816,59 +828,62 @@ namespace BeacomStair
 
         private void CreateGuarding(PlatformParts platform, FlightParts flight)
         {
-            double railOffset = StairSettings.RailCentreOffset;
+            double halfStringerSpacing =
+                StairSettings.StringerSpacing / 2.0;
+
+            // The PFC insertion line is the inward web face. Move half the 75 mm
+            // channel width outward so every handrail post sits on the centre of
+            // the PFC top flange, keeping the full 900 mm clear stair width.
+            double leftRailY =
+                -halfStringerSpacing - (StairSettings.StringerWidth / 2.0);
+
+            double rightRailY =
+                halfStringerSpacing + (StairSettings.StringerWidth / 2.0);
 
             CreateSideGuard(
-                -railOffset,
+                leftRailY,
                 "L",
-                platform.Deck,
+                platform.LeftStringer,
                 flight.LeftStringer);
 
             CreateSideGuard(
-                railOffset,
+                rightRailY,
                 "R",
-                platform.Deck,
+                platform.RightStringer,
                 flight.RightStringer);
         }
 
         private void CreateSideGuard(
             double y,
             string side,
-            ContourPlate platformDeck,
+            Beam platformStringer,
             Beam flightStringer)
         {
-            double platformZ = StairSettings.TotalRise;
+            // Private-stair arrangement: keep the handrail continuous at the
+            // same nominal height over both the landing and the pitch line.
+            // This removes the old 200 mm step in the rail at the top of flight.
+            double platformTopRailZ =
+                StairSettings.TotalRise + StairSettings.PlatformGuardHeight;
+
+            double platformMidRailZ =
+                StairSettings.TotalRise + StairSettings.MidRailHeight;
 
             Beam platformTopRail = CreateBeam(
-                "BEACOM PLATFORM TOP RAIL " + side,
+                "HANDRAIL",
                 StairSettings.RailProfile,
-                LocalPoint(0.0, y, platformZ + StairSettings.PlatformGuardHeight),
-                LocalPoint(StairSettings.PlatformLength, y, platformZ + StairSettings.PlatformGuardHeight),
+                LocalPoint(0.0, y, platformTopRailZ),
+                LocalPoint(StairSettings.PlatformLength, y, platformTopRailZ),
                 "7");
 
             Beam platformMidRail = CreateBeam(
-                "BEACOM PLATFORM MID RAIL " + side,
+                "HANDRAIL",
                 StairSettings.RailProfile,
-                LocalPoint(0.0, y, platformZ + StairSettings.MidRailHeight),
-                LocalPoint(StairSettings.PlatformLength, y, platformZ + StairSettings.MidRailHeight),
+                LocalPoint(0.0, y, platformMidRailZ),
+                LocalPoint(StairSettings.PlatformLength, y, platformMidRailZ),
                 "7");
 
-            List<Beam> platformPosts = new List<Beam>
-            {
-                CreateRailPost(0.0, y, platformZ, platformZ + StairSettings.PlatformGuardHeight, side, "PLATFORM"),
-                CreateRailPost(500.0, y, platformZ, platformZ + StairSettings.PlatformGuardHeight, side, "PLATFORM"),
-                CreateRailPost(StairSettings.PlatformLength, y, platformZ, platformZ + StairSettings.PlatformGuardHeight, side, "PLATFORM")
-            };
-
-            foreach (Beam post in platformPosts)
-            {
-                CreateFilletWeld(platformDeck, post, "PLATFORM POST " + side + " TO DECK");
-                CreateFilletWeld(post, platformTopRail, "PLATFORM POST " + side + " TO TOP RAIL");
-                CreateFilletWeld(post, platformMidRail, "PLATFORM POST " + side + " TO MID RAIL");
-            }
-
             Beam stairTopRail = CreateBeam(
-                "BEACOM STAIR TOP RAIL " + side,
+                "HANDRAIL",
                 StairSettings.RailProfile,
                 LocalPoint(
                     StairSettings.PlatformLength,
@@ -881,7 +896,7 @@ namespace BeacomStair
                 "7");
 
             Beam stairMidRail = CreateBeam(
-                "BEACOM STAIR MID RAIL " + side,
+                "HANDRAIL",
                 StairSettings.RailProfile,
                 LocalPoint(
                     StairSettings.PlatformLength,
@@ -893,57 +908,244 @@ namespace BeacomStair
                     StairSettings.Rise + StairSettings.MidRailHeight),
                 "7");
 
-            for (double x = StairSettings.PlatformLength;
-                 x <= StairSettings.OverallLength + 0.1;
-                 x += 500.0)
-            {
-                double baseZ = FlightStringerTopZ(x);
-                double topZ = FlightPitchZ(x) + StairSettings.StairHandrailHeight;
+            // The horizontal and sloping rails now meet at one clean mitred joint.
+            CreateFilletWeld(
+                platformTopRail,
+                stairTopRail,
+                "HANDRAIL " + side + " TOP LANDING/FLIGHT JOINT");
 
-                Beam post = CreateRailPost(
+            CreateFilletWeld(
+                platformMidRail,
+                stairMidRail,
+                "HANDRAIL " + side + " MID LANDING/FLIGHT JOINT");
+
+            // Three neat posts on the 1000 mm landing: 100 / 500 / 900.
+            double platformMiddleX =
+                StairSettings.PlatformLength / 2.0;
+
+            double[] platformPostXs =
+            {
+                StairSettings.PlatformPostEndOffset,
+                platformMiddleX,
+                StairSettings.PlatformLength - StairSettings.PlatformPostEndOffset
+            };
+
+            foreach (double x in platformPostXs)
+            {
+                Beam post = CreatePlatformHandrailPost(
                     x,
                     y,
-                    baseZ,
-                    topZ,
                     side,
-                    "STAIR");
+                    platformStringer,
+                    platformTopRailZ);
 
-                CreateFilletWeld(flightStringer, post, "STAIR POST " + side + " TO PFC");
-                CreateFilletWeld(post, stairTopRail, "STAIR POST " + side + " TO TOP RAIL");
-                CreateFilletWeld(post, stairMidRail, "STAIR POST " + side + " TO MID RAIL");
+                CreateFilletWeld(
+                    post,
+                    platformTopRail,
+                    "HANDRAIL POST " + side + " TO TOP RAIL");
+
+                CreateFilletWeld(
+                    post,
+                    platformMidRail,
+                    "HANDRAIL POST " + side + " TO MID RAIL");
             }
 
-            Beam transition = CreateBeam(
-                "BEACOM RAIL TRANSITION " + side,
-                StairSettings.RailProfile,
-                LocalPoint(
-                    StairSettings.PlatformLength,
+            // Flight posts start/end 250 mm clear of the two fabricated PFC joints
+            // and run at 1000 mm horizontal centres: 1250 / 2250 / 3250 / 4250.
+            for (double nominalX =
+                    StairSettings.PlatformLength + StairSettings.FlightPostEndOffset;
+                 nominalX <=
+                    StairSettings.OverallLength - StairSettings.FlightPostEndOffset + 0.1;
+                 nominalX += StairSettings.FlightPostSpacing)
+            {
+                Beam post = CreateFlightHandrailPost(
+                    nominalX,
                     y,
-                    StairSettings.TotalRise + StairSettings.StairHandrailHeight),
-                LocalPoint(
-                    StairSettings.PlatformLength,
-                    y,
-                    StairSettings.TotalRise + StairSettings.PlatformGuardHeight),
-                "7");
+                    side,
+                    flightStringer);
 
-            CreateFilletWeld(platformTopRail, transition, "PLATFORM/STAIR RAIL TRANSITION " + side);
-            CreateFilletWeld(stairTopRail, transition, "STAIR RAIL/TRANSITION " + side);
+                CreateFilletWeld(
+                    post,
+                    stairTopRail,
+                    "HANDRAIL POST " + side + " TO SLOPING TOP RAIL");
+
+                CreateFilletWeld(
+                    post,
+                    stairMidRail,
+                    "HANDRAIL POST " + side + " TO SLOPING MID RAIL");
+            }
         }
 
-        private Beam CreateRailPost(
+        private Beam CreatePlatformHandrailPost(
             double x,
             double y,
-            double baseZ,
-            double topZ,
             string side,
-            string zone)
+            Beam platformStringer,
+            double topRailZ)
         {
-            return CreateBeam(
-                "BEACOM " + zone + " POST " + side,
+            double halfLength =
+                StairSettings.HandrailPostBaseLength / 2.0;
+
+            double halfWidth =
+                StairSettings.HandrailPostBaseWidth / 2.0;
+
+            // The platform PFC top is at 3160; the post footplate sits directly
+            // on that top flange, outside the 900 mm wide landing deck.
+            double pfcTopZ =
+                StairSettings.TotalRise - StairSettings.TreadPlateThickness;
+
+            double plateCentreZ =
+                pfcTopZ + (StairSettings.HandrailPostBaseThickness / 2.0);
+
+            ContourPlate footPlate = CreatePlate(
+                "HANDRAIL POST BASE " + side,
+                StairSettings.EndPlateProfile,
+                LocalPoint(x - halfLength, y - halfWidth, plateCentreZ),
+                LocalPoint(x + halfLength, y - halfWidth, plateCentreZ),
+                LocalPoint(x + halfLength, y + halfWidth, plateCentreZ),
+                LocalPoint(x - halfLength, y + halfWidth, plateCentreZ),
+                "99");
+
+            double halfBoltSpacing =
+                StairSettings.HandrailPostBoltSpacing / 2.0;
+
+            CreateTwoBoltArray(
+                footPlate,
+                platformStringer,
+                LocalPoint(x - halfBoltSpacing, y, plateCentreZ),
+                LocalPoint(x + halfBoltSpacing, y, plateCentreZ),
+                StairSettings.HandrailPostBoltSize,
+                BoltPlaneKind.Horizontal,
+                "HANDRAIL POST BASE " + side + " - 2 M12 TO PLATFORM CHANNEL");
+
+            double postBaseZ =
+                pfcTopZ + StairSettings.HandrailPostBaseThickness;
+
+            Beam post = CreateBeam(
+                "HANDRAIL",
                 StairSettings.RailProfile,
-                LocalPoint(x, y, baseZ),
-                LocalPoint(x, y, topZ),
+                LocalPoint(x, y, postBaseZ),
+                LocalPoint(x, y, topRailZ),
                 "7");
+
+            CreateFilletWeld(
+                footPlate,
+                post,
+                "HANDRAIL POST " + side + " TO BASE PLATE");
+
+            return post;
+        }
+
+        private Beam CreateFlightHandrailPost(
+            double nominalX,
+            double y,
+            string side,
+            Beam flightStringer)
+        {
+            double slope =
+                StairSettings.Rise / StairSettings.Going;
+
+            double lengthFactor =
+                Math.Sqrt(1.0 + (slope * slope));
+
+            // Unit vector along the descending PFC and the upward normal to its
+            // top flange in the stair side plane.
+            double tangentX =
+                1.0 / lengthFactor;
+
+            double tangentZ =
+                -slope / lengthFactor;
+
+            double normalX =
+                slope / lengthFactor;
+
+            double normalZ =
+                1.0 / lengthFactor;
+
+            double pfcTopZ =
+                FlightStringerTopZ(nominalX);
+
+            double halfPlateThickness =
+                StairSettings.HandrailPostBaseThickness / 2.0;
+
+            double plateCentreX =
+                nominalX + (normalX * halfPlateThickness);
+
+            double plateCentreZ =
+                pfcTopZ + (normalZ * halfPlateThickness);
+
+            double halfLength =
+                StairSettings.HandrailPostBaseLength / 2.0;
+
+            double halfWidth =
+                StairSettings.HandrailPostBaseWidth / 2.0;
+
+            double xBack =
+                plateCentreX - (tangentX * halfLength);
+
+            double zBack =
+                plateCentreZ - (tangentZ * halfLength);
+
+            double xFront =
+                plateCentreX + (tangentX * halfLength);
+
+            double zFront =
+                plateCentreZ + (tangentZ * halfLength);
+
+            ContourPlate footPlate = CreatePlate(
+                "HANDRAIL POST BASE " + side,
+                StairSettings.EndPlateProfile,
+                LocalPoint(xBack, y - halfWidth, zBack),
+                LocalPoint(xFront, y - halfWidth, zFront),
+                LocalPoint(xFront, y + halfWidth, zFront),
+                LocalPoint(xBack, y + halfWidth, zBack),
+                "99");
+
+            double halfBoltSpacing =
+                StairSettings.HandrailPostBoltSpacing / 2.0;
+
+            Point firstBolt = LocalPoint(
+                plateCentreX - (tangentX * halfBoltSpacing),
+                y,
+                plateCentreZ - (tangentZ * halfBoltSpacing));
+
+            Point secondBolt = LocalPoint(
+                plateCentreX + (tangentX * halfBoltSpacing),
+                y,
+                plateCentreZ + (tangentZ * halfBoltSpacing));
+
+            CreateTwoBoltArray(
+                footPlate,
+                flightStringer,
+                firstBolt,
+                secondBolt,
+                StairSettings.HandrailPostBoltSize,
+                BoltPlaneKind.StringerTop,
+                "HANDRAIL POST BASE " + side + " - 2 M12 TO FLIGHT CHANNEL");
+
+            // Start the vertical CHS on the top face of the sloping PL10 footplate.
+            double postX =
+                nominalX + (normalX * StairSettings.HandrailPostBaseThickness);
+
+            double postBaseZ =
+                pfcTopZ + (normalZ * StairSettings.HandrailPostBaseThickness);
+
+            double postTopZ =
+                FlightPitchZ(postX) + StairSettings.StairHandrailHeight;
+
+            Beam post = CreateBeam(
+                "HANDRAIL",
+                StairSettings.RailProfile,
+                LocalPoint(postX, y, postBaseZ),
+                LocalPoint(postX, y, postTopZ),
+                "7");
+
+            CreateFilletWeld(
+                footPlate,
+                post,
+                "HANDRAIL POST " + side + " TO SLOPING BASE PLATE");
+
+            return post;
         }
 
         private double FlightPitchZ(double x)
@@ -1530,7 +1732,7 @@ namespace BeacomStair
 
             InsertOrThrow(
                 beam,
-                name + " [model name: PLATE, class 99, profile: " + profile +
+                name + " [class " + modelClass + ", profile: " + profile +
                 ", material: " + StairSettings.Material + "]");
 
             return beam;
@@ -1604,6 +1806,32 @@ namespace BeacomStair
                         // X-Z plane. Bolt axis is across the stair through the PFC web.
                         planeAxisX = globalXAxis;
                         planeAxisY = globalZAxis;
+                        break;
+
+                    case BoltPlaneKind.StringerTop:
+                        // Plane of the sloping PFC top flange. The bolt axis is
+                        // normal to the flange/footplate rather than vertical.
+                        planeAxisX = ToGlobalVector(
+                            new V3(
+                                1.0,
+                                0.0,
+                                -(StairSettings.Rise / StairSettings.Going)),
+                            originalPlane);
+
+                        planeAxisY = globalYAxis;
+                        break;
+
+                    case BoltPlaneKind.StringerTop:
+                        // Plane of the sloping PFC top flange. The bolt axis is
+                        // normal to the flange/footplate rather than vertical.
+                        planeAxisX = ToGlobalVector(
+                            new V3(
+                                1.0,
+                                0.0,
+                                -(StairSettings.Rise / StairSettings.Going)),
+                            originalPlane);
+
+                        planeAxisY = globalYAxis;
                         break;
 
                     case BoltPlaneKind.Wall:
