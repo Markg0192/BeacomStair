@@ -29,6 +29,9 @@ namespace BeacomStair
         public const string KickerProfile = "PL6";
         public const string TreadSidePlateProfile = "PL8";
         public const string EndPlateProfile = "PL10";
+        public const string PlatformSupportAngleProfile = "L50*50*6";
+        public const double PlatformSupportAngleLeg = 50.0;
+        public const double PlatformSupportAngleEndClearance = 10.0;
         public const string Material = "S355JR";
 
         // Tread detail: horizontal PL10 tread with a vertical plate at each side.
@@ -45,8 +48,8 @@ namespace BeacomStair
         public const double KickerThickness = 6.0;
 
         // Top and bottom connections.
-        public const double WallPlateWidth = 180.0;
-        public const double WallPlateHeight = 220.0;
+        public const double WallPlateWidth = 70.0;
+        public const double WallPlateHeight = 160.0;
         // Base plate is deliberately kept fully inside the PFC footprint.
         public const double BasePlateLength = 160.0;
         public const double BasePlateWidth = 70.0;
@@ -226,6 +229,22 @@ namespace BeacomStair
                 LocalPoint(StairSettings.PlatformLength, halfStringerSpacing, stringerTopZ),
                 "2",
                 true);
+
+            Beam leftSupportAngle = CreatePlatformSupportAngle(
+                -halfStringerSpacing,
+                true,
+                "L");
+
+            Beam rightSupportAngle = CreatePlatformSupportAngle(
+                halfStringerSpacing,
+                false,
+                "R");
+
+            CreateFilletWeld(leftStringer, leftSupportAngle, "PLATFORM SUPPORT ANGLE L TO PFC");
+            CreateFilletWeld(rightStringer, rightSupportAngle, "PLATFORM SUPPORT ANGLE R TO PFC");
+
+            CreateFilletWeld(deck, leftSupportAngle, "PLATFORM DECK TO SUPPORT ANGLE L");
+            CreateFilletWeld(deck, rightSupportAngle, "PLATFORM DECK TO SUPPORT ANGLE R");
 
             CreateFilletWeld(leftStringer, deck, "PLATFORM DECK TO LEFT PFC");
             CreateFilletWeld(rightStringer, deck, "PLATFORM DECK TO RIGHT PFC");
@@ -538,29 +557,120 @@ namespace BeacomStair
             CreateBaseConnection(flight.RightBottomPost, halfStringerSpacing, "R");
         }
 
+        private Beam CreatePlatformSupportAngle(
+            double stringerY,
+            bool leftSide,
+            string side)
+        {
+            double halfLeg =
+                StairSettings.PlatformSupportAngleLeg / 2.0;
+
+            // The flat PFC web face is the +/-450 datum. Keep the complete
+            // 50x50 angle inside the landing: vertical leg against the web and
+            // horizontal leg immediately below the PL10 deck.
+            double supportY = leftSide
+                ? stringerY + halfLeg
+                : stringerY - halfLeg;
+
+            double deckUndersideZ =
+                StairSettings.TotalRise - StairSettings.TreadPlateThickness;
+
+            double supportZ =
+                deckUndersideZ - halfLeg;
+
+            Point nominalStart = LocalPoint(
+                StairSettings.PlatformSupportAngleEndClearance,
+                supportY,
+                supportZ);
+
+            Point nominalEnd = LocalPoint(
+                StairSettings.PlatformLength -
+                    StairSettings.PlatformSupportAngleEndClearance,
+                supportY,
+                supportZ);
+
+            // Reverse one side so the asymmetric angle section mirrors correctly
+            // and keeps its vertical leg against the PFC web on both sides.
+            Point start = leftSide ? nominalStart : nominalEnd;
+            Point end = leftSide ? nominalEnd : nominalStart;
+
+            Beam angle = new Beam(start, end)
+            {
+                Name = "BEACOM PLATFORM SUPPORT ANGLE " + side,
+                Class = "5"
+            };
+
+            angle.Profile.ProfileString =
+                StairSettings.PlatformSupportAngleProfile;
+
+            angle.Material.MaterialString =
+                StairSettings.Material;
+
+            angle.Position.Plane = Position.PlaneEnum.MIDDLE;
+            angle.Position.Depth = Position.DepthEnum.MIDDLE;
+            angle.Position.Rotation = Position.RotationEnum.TOP;
+
+            InsertOrThrow(
+                angle,
+                angle.Name + " [" +
+                StairSettings.PlatformSupportAngleProfile +
+                ", 10 mm clear each end, directly below landing deck]");
+
+            return angle;
+        }
+
         private void CreateWallConnection(Beam stringer, double y, string side)
         {
-            double centreZ = StairSettings.TotalRise - (StairSettings.StringerDepth / 2.0);
             double halfWidth = StairSettings.WallPlateWidth / 2.0;
             double halfHeight = StairSettings.WallPlateHeight / 2.0;
+
+            // The platform PFC top is 10 mm below finished landing level because
+            // the PL10 deck finishes exactly at 3170. Keep the 160 mm end plate
+            // wholly within the 180 mm PFC depth: 10 mm clear top and bottom.
+            double stringerTopZ =
+                StairSettings.TotalRise - StairSettings.TreadPlateThickness;
+
+            double centreZ =
+                stringerTopZ - (StairSettings.StringerDepth / 2.0);
+
+            bool leftSide = y < 0.0;
+
+            // Same transverse setting-out as the base and joining plates:
+            // 70 mm plate flush to the outside of the 75 mm PFC footprint,
+            // leaving 5 mm at the web side for the 6 mm fillet weld.
+            double plateY =
+                GetJoiningPlateCentreY(y, leftSide);
+
+            // The user's first pick is the wall face at X = 0.
+            // A PL10 contour plate is centred on its contour plane, so X = 5
+            // puts the back face of the plate exactly on the picked wall plane.
+            double plateX =
+                StairSettings.BasePlateThickness / 2.0;
 
             ContourPlate wallPlate = CreatePlate(
                 "BEACOM WALL END PLATE " + side,
                 StairSettings.EndPlateProfile,
-                LocalPoint(5.0, y - halfWidth, centreZ - halfHeight),
-                LocalPoint(5.0, y + halfWidth, centreZ - halfHeight),
-                LocalPoint(5.0, y + halfWidth, centreZ + halfHeight),
-                LocalPoint(5.0, y - halfWidth, centreZ + halfHeight),
+                LocalPoint(plateX, plateY - halfWidth, centreZ - halfHeight),
+                LocalPoint(plateX, plateY + halfWidth, centreZ - halfHeight),
+                LocalPoint(plateX, plateY + halfWidth, centreZ + halfHeight),
+                LocalPoint(plateX, plateY - halfWidth, centreZ + halfHeight),
                 "8");
 
-            CreateFilletWeld(stringer, wallPlate, "WALL END PLATE " + side + " TO PFC");
+            CreateFilletWeld(
+                stringer,
+                wallPlate,
+                "WALL END PLATE " + side + " TO PFC");
 
-            Point lowerBolt = LocalPoint(5.0, y, centreZ - (StairSettings.WallAnchorBoltSpacing / 2.0));
-            Point upperBolt = LocalPoint(5.0, y, centreZ + (StairSettings.WallAnchorBoltSpacing / 2.0));
+            Point lowerBolt = LocalPoint(
+                plateX,
+                plateY,
+                centreZ - (StairSettings.BaseAnchorBoltSpacing / 2.0));
 
-            // There is no concrete wall object selected by this tool. Self-referencing
-            // the plate lets Tekla create the two site bolt objects as the anchor
-            // representation through the plate.
+            Point upperBolt = LocalPoint(
+                plateX,
+                plateY,
+                centreZ + (StairSettings.BaseAnchorBoltSpacing / 2.0));
+
             CreateTwoBoltArray(
                 wallPlate,
                 wallPlate,
