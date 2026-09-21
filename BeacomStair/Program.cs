@@ -1,8 +1,6 @@
 using System;
-using System.Windows.Forms;
-using Tekla.Structures.Geometry3d;
+using System.Windows;
 using Tekla.Structures.Model;
-using Tekla.Structures.Model.UI;
 
 namespace BeacomStair
 {
@@ -19,44 +17,27 @@ namespace BeacomStair
                 {
                     MessageBox.Show(
                         "Open Tekla Structures 2023 and a model first, then run BeacomStair again.",
-                        "BeacomStair",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
+                        "Beacom Stair",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
                     return;
                 }
 
-                Picker picker = new Picker();
+                Application application = new Application
+                {
+                    ShutdownMode = ShutdownMode.OnMainWindowClose
+                };
 
-                Point startPoint = picker.PickPoint(
-                    "BeacomStair: pick the GROUND point at the WALL, below the top landing.");
-
-                Point directionPoint = picker.PickPoint(
-                    "BeacomStair: pick outward from the wall in the direction of the stair FOOT.");
-
-                StairBuilder builder = new StairBuilder(model);
-                StairBuildResult result = builder.Build(startPoint, directionPoint);
-
-                model.CommitChanges();
-
-                MessageBox.Show(
-                    "Beacom stair inserted.\r\n\r\n" +
-                    "15 rises @ " + result.Rise.ToString("0.00") + " mm\r\n" +
-                    "14 treads @ " + StairSettings.Going.ToString("0") + " mm\r\n" +
-                    "Flight run: " + StairSettings.FlightRun.ToString("0") + " mm\r\n" +
-                    "Top platform: " + StairSettings.PlatformLength.ToString("0") + " mm\r\n" +
-                    "Overall: " + StairSettings.OverallLength.ToString("0") + " mm\r\n" +
-                    "Objects inserted: " + result.InsertedObjectCount,
-                    "BeacomStair",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                application.Run(new MainWindow(model));
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
                     "BeacomStair stopped.\r\n\r\n" + ex.Message,
-                    "BeacomStair",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                    "Beacom Stair",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
     }
