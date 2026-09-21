@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Tekla.Structures.Geometry3d;
 using Tekla.Structures.Model;
 
@@ -15,32 +18,32 @@ namespace BeacomStair
         public const double FlightRun = 3500.0;
         public const double PlatformLength = 1000.0;
         public const double OverallLength = 4500.0;
-        public const double ClearBetweenHandrails = 900.0;
+        public static double ClearBetweenHandrails { get; private set; } = 900.0;
 
         // Main steelwork.
         // The PFC reference lines represent the two inward web faces.
         // This gives a genuine 900 mm clear tread width between stringers.
-        public const double TreadWidth = 900.0;
-        public const double StringerSpacing = 900.0;
-        public const double StringerDepth = 180.0;
-        public const double StringerWidth = 75.0;
-        public const string StringerProfile = "PFC-180*75*20";
-        public const string TreadProfile = "PL10";
+        public static double TreadWidth { get; private set; } = 900.0;
+        public static double StringerSpacing { get; private set; } = 900.0;
+        public static double StringerDepth { get; private set; } = 180.0;
+        public static double StringerWidth { get; private set; } = 75.0;
+        public static string StringerProfile { get; private set; } = "PFC-180*75*20";
+        public static string TreadProfile { get; private set; } = "PL10";
         public const string KickerProfile = "PL6";
-        public const string TreadSidePlateProfile = "PL8";
+        public static string TreadSidePlateProfile { get; private set; } = "PL8";
         public const string EndPlateProfile = "PL10";
-        public const string PlatformSupportAngleProfile = "RSA50*50*6";
-        public const double PlatformSupportAngleLeg = 50.0;
+        public static string PlatformSupportAngleProfile { get; private set; } = "RSA50*50*6";
+        public static double PlatformSupportAngleLeg { get; private set; } = 50.0;
         public const double PlatformSupportAngleEndClearance = 10.0;
         public const string Material = "S355JR";
 
         // Tread detail: horizontal PL10 tread with a vertical plate at each side.
         public const double TreadSidePlateLength = 250.0;
         public const double TreadSidePlateHeight = 70.0;
-        public const double TreadSidePlateThickness = 8.0;
+        public static double TreadSidePlateThickness { get; private set; } = 8.0;
         public const double TreadSidePlateSnipeHorizontal = 75.0;
         public const double TreadSidePlateSnipeVertical = 50.0;
-        public const double TreadPlateThickness = 10.0;
+        public static double TreadPlateThickness { get; private set; } = 10.0;
         public const double TreadBoltSize = 12.0;
         public const double TreadBoltSpacing = 125.0;
         public const double TreadFirstBoltFromLeadingEdge = 30.0;
@@ -55,7 +58,10 @@ namespace BeacomStair
         // Base plate is deliberately kept fully inside the PFC footprint.
         public const double BasePlateLength = 170.0;
         public const double BasePlateInsideProjection = 80.0;
-        public const double BasePlateWidth = StringerWidth + BasePlateInsideProjection;
+        public static double BasePlateWidth
+        {
+            get { return StringerWidth + BasePlateInsideProjection; }
+        }
         public const double BasePlateAnchorInsetFromWeb = 45.0;
         public const double BasePlateThickness = 10.0;
         public const double StringerJointPlateThickness = 10.0;
@@ -88,11 +94,11 @@ namespace BeacomStair
         // 33.7 mm outside diameter, with an 82 mm centre-line radius for formed
         // bends. Use that fabrication system consistently through posts, rails
         // and returns.
-        public const double HandrailOutsideDiameter = 33.7;
+        public static double HandrailOutsideDiameter { get; private set; } = 33.7;
         public const double StairHandrailHeight = 900.0;
         public const double PlatformGuardHeight = 900.0;
         public const double MidRailHeight = 550.0;
-        public const string RailProfile = "CHS33.7*3.2";
+        public static string RailProfile { get; private set; } = "CHS33.7*3.2";
 
         // Handrail posts are shop-welded to PL10 footplates and site-bolted
         // through the top flange of the PFC stringers. The supplied top-mounted
@@ -125,6 +131,96 @@ namespace BeacomStair
         public const double HandrailWeldedElbowRadius = 38.1;
         public const double HandrailReturnProjection = 164.0;
         public const double HandrailReturnCornerOffset = 82.0;
+
+        public static void ApplyOptions(StairOptions options)
+        {
+            if (options == null)
+                throw new ArgumentNullException(nameof(options));
+
+            if (options.Width < 600.0 || options.Width > 2000.0)
+            {
+                throw new InvalidOperationException(
+                    "Stair width must be between 600 mm and 2000 mm.");
+            }
+
+            double[] pfc = GetProfileNumbers(options.StringerProfile);
+            if (pfc.Length < 2)
+            {
+                throw new InvalidOperationException(
+                    "Stringer profile should look like PFC-180*75*20.");
+            }
+
+            double[] treadPlate = GetProfileNumbers(options.TreadProfile);
+            if (treadPlate.Length < 1)
+            {
+                throw new InvalidOperationException(
+                    "Tread profile should look like PL10.");
+            }
+
+            double[] treadEndPlate = GetProfileNumbers(options.TreadSidePlateProfile);
+            if (treadEndPlate.Length < 1)
+            {
+                throw new InvalidOperationException(
+                    "Tread end-plate profile should look like PL8.");
+            }
+
+            double[] rail = GetProfileNumbers(options.RailProfile);
+            if (rail.Length < 1)
+            {
+                throw new InvalidOperationException(
+                    "Handrail profile should look like CHS33.7*3.2.");
+            }
+
+            double[] rsa = GetProfileNumbers(options.PlatformSupportAngleProfile);
+            if (rsa.Length < 2)
+            {
+                throw new InvalidOperationException(
+                    "Landing support profile should look like RSA50*50*6.");
+            }
+
+            TreadWidth = options.Width;
+            StringerSpacing = options.Width;
+            ClearBetweenHandrails = options.Width;
+
+            StringerProfile = options.StringerProfile.Trim();
+            StringerDepth = pfc[0];
+            StringerWidth = pfc[1];
+
+            TreadProfile = options.TreadProfile.Trim();
+            TreadPlateThickness = treadPlate[0];
+
+            TreadSidePlateProfile = options.TreadSidePlateProfile.Trim();
+            TreadSidePlateThickness = treadEndPlate[0];
+
+            RailProfile = options.RailProfile.Trim();
+            HandrailOutsideDiameter = rail[0];
+
+            PlatformSupportAngleProfile =
+                options.PlatformSupportAngleProfile.Trim();
+
+            // The support-angle positioning is based on an equal-leg RSA.
+            // If an unequal angle is entered, use the smaller leg as the
+            // supported/deck-side leg so the detail remains conservative.
+            PlatformSupportAngleLeg =
+                Math.Min(rsa[0], rsa[1]);
+        }
+
+        private static double[] GetProfileNumbers(string profile)
+        {
+            if (string.IsNullOrWhiteSpace(profile))
+                return new double[0];
+
+            MatchCollection matches =
+                Regex.Matches(profile, @"\d+(?:\.\d+)?");
+
+            return matches
+                .Cast<Match>()
+                .Select(match =>
+                    double.Parse(
+                        match.Value,
+                        CultureInfo.InvariantCulture))
+                .ToArray();
+        }
 
         public static double Rise
         {
